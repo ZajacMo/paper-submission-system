@@ -4,22 +4,54 @@
 - **URL**: `/api/payments`
 - **Method**: `POST`
 - **Description**: 创建支付记录（用于作者支付审稿费）
-- **Request Body**: `{"paper_id": "number", "amount": "number"}`
-- **Response**: `{"message": "string"}`
+- **Request Body**: 
+```json
+{
+    "paper_id": "number", 
+    "amount": "number"
+}
+```
+- **Response**: 
+```json
+{
+    "message": "string"
+}
+```
 
 ## 更新支付状态
 - **URL**: `/api/payments/:id/status`
 - **Method**: `PUT`
 - **Description**: 更新支付状态（编辑使用）
-- **Request Body**: `{"status": "Paid/Pending"}`
-- **Response**: `{"message": "string"}`
+- **Request Body**: 
+```json
+{
+    "status": "Paid/Pending"
+}
+```
+- **Response**: 
+```json
+{
+    "message": "string"
+}
+```
 
 ## 提现申请
 - **URL**: `/api/payments/withdrawals`
 - **Method**: `POST`
 - **Description**: 专家提交审稿任务的提现申请
-- **Request Body**: `{"assignment_id": "number"}`
-- **成功响应** (200): `{"message": "string", "assignment_id": "number"}`
+- **Request Body**: 
+```json
+{
+    "assignment_id": "number"
+}
+```
+- **成功响应** (200): 
+```json
+{
+    "message": "string", 
+    "assignment_id": "number"
+}
+```
 - **错误响应**:
   - 400: `{"message": "assignment_id是必需的"}` 或 `{"message": "该任务的提现申请已提交"}` 或 `{"message": "请先完善银行账户信息"}`
   - 404: `{"message": "该审稿任务不存在或未完成"}` 或 `{"message": "专家信息不存在"}` 或 `{"message": "未找到可提现的记录"}`
