@@ -25,6 +25,9 @@ services:
     # 允许容器访问主机上的服务
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    # 挂载volume用于文件上传
+    volumes:
+      - paper-submitted:/usr/src/app/uploads
   
 #   db:
 #     image: mysql:9.4
@@ -43,7 +46,14 @@ services:
 #       timeout: 5s
 #       retries: 5
 
-# volumes:
+# 定义volume
+volumes:
+  paper-submitted:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/host/f/Documents/Projects/SQLProject/paper-submission-system-sql/uploads
   
 
 # The commented out section below is an example of how to define a PostgreSQL
