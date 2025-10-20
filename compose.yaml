@@ -27,10 +27,10 @@ services:
       - "host.docker.internal:host-gateway"
   
 #   db:
-#     image: mysql:8
+#     image: mysql:9.4
 #     restart: always
 #     environment:
-#       MYSQL_ROOT_PASSWORD: password
+#       MYSQL_ROOT_PASSWORD: 12345
 #       MYSQL_DATABASE: paper_submission_system
 #     volumes:
 #       - db-data:/var/lib/mysql
@@ -44,7 +44,7 @@ services:
 #       retries: 5
 
 # volumes:
-#   db-data:
+  
 
 # The commented out section below is an example of how to define a PostgreSQL
 # database that your application can use. `depends_on` tells Docker Compose to
