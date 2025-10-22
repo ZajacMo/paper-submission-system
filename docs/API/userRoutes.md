@@ -1,5 +1,36 @@
 # 用户管理模块
 
+## 搜索专家
+- **URL**: `/api/users/search-experts`
+- **Method**: `GET`
+- **Description**: 根据专家ID、姓名或研究领域搜索专家信息，支持所有已登录用户访问，提供分页功能
+- **Authorization**: 需要 JWT 令牌
+- **Query Parameters**:
+  - `query` (必填): 搜索关键词，可输入专家ID、姓名或研究领域
+  - `page` (可选): 页码，默认为1
+  - `limit` (可选): 每页数量，默认为10
+- **Success Response**:
+  ```json
+  {
+    "experts": [
+      {
+        "expert_id": "number",
+        "name": "string",
+        "title": "string",
+        "research_areas": "string"
+      },
+      ...
+    ],
+    "pagination": {
+      "total": "number",
+      "page": "number",
+      "limit": "number",
+      "totalPages": "number"
+    }
+  }
+  ```
+- **Error Response**: `{"message": "请输入专家ID、姓名或研究领域"}` (400), `{"message": "错误信息"}` (500)
+
 ## 根据输入的作者ID或姓名查询作者
 - **URL**: `/api/users/search`
 - **Method**: `GET`
