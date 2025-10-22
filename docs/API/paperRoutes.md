@@ -34,22 +34,22 @@
 ## 获取论文列表
 - **URL**: `/api/papers`
 - **Method**: `GET`
-- **Description**: 获取论文列表（根据用户角色返回不同范围的论文）
+- **Description**: 获取论文列表，支持分页、过滤和排序功能（根据用户角色返回不同范围的论文）
 - **Authorization**: 需要 JWT 令牌
 - **Query Parameters**:
-  - `id` (number): 按论文ID精确搜索（优先，若有则不考虑其他）
-  - `progress` (string): 按论文进度过滤
-  - `search` (string): 搜索关键词，会在标题（中、英文）和摘要（中、英文）中进行模糊搜索（当指定了id参数时，此参数将被忽略）
+  - `id` (string): 按论文ID精确搜索（优先，若有则不考虑其他条件）
+  - `progress` (string): 按论文状态过滤
+  - `search` (string): 搜索关键词，会在标题（中、英文）和摘要（中、英文）中进行模糊搜索
   - `sortBy` (string): 排序字段，可选值：submission_date, title_zh, title_en, progress，默认值为 submission_date
   - `sortOrder` (string): 排序顺序，可选值：ASC, DESC，默认值为 DESC
   - `page` (number): 页码，默认值为 1
   - `pageSize` (number): 每页条数，默认值为 10
   - `conclusion` (string): 专家角色特有，按审稿结论过滤
   - `review_status` (string): 专家角色特有，按审稿状态过滤
-  - `review_start_date` (date): 专家角色特有，按审稿提交开始日期过滤
-  - `review_end_date` (date): 专家角色特有，按审稿提交结束日期过滤
+  - `review_start_date` (string): 专家角色特有，按审稿提交开始日期过滤
+  - `review_end_date` (string): 专家角色特有，按审稿提交结束日期过滤
 - **Access Control**:
-  - 作者：只能查看自己参与的论文
+  - 作者：只能查看自己参与的论文（通过author_accessible_papers视图）
   - 编辑：可以查看所有论文
   - 专家：只能查看review_assignments表中与自己关联的论文
 - **Response**: 

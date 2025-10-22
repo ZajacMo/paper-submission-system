@@ -117,9 +117,10 @@ router.get('/progress', authenticateToken, authorizeRole(['author']), async (req
  * @apiSuccess {number} pageSize 每页条数
  * @apiSuccess {number} totalPages 总页数
  */
+// 获取论文列表 - 更简洁的实现
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    let query, countQuery, params = [], countParams = [];
+    // 解构查询参数并设置默认值
     const { 
       progress, 
       search, 
@@ -127,7 +128,11 @@ router.get('/', authenticateToken, async (req, res) => {
       sortBy = 'submission_date', 
       sortOrder = 'DESC',
       page = 1,
-      pageSize = 10
+      pageSize = 10,
+      conclusion, 
+      review_status, 
+      review_start_date, 
+      review_end_date 
     } = req.query;
     
     // 验证并转换分页参数
@@ -135,127 +140,136 @@ router.get('/', authenticateToken, async (req, res) => {
     const size = parseInt(pageSize) || 10;
     const offset = (pageNum - 1) * size;
     
-    if (req.user.role === 'author') {
-      // 使用作者可访问论文视图
-      query = `SELECT DISTINCT p.*, pp.status AS progress 
-               FROM author_accessible_papers p 
-               LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id
-               WHERE p.author_id = ?`;
-      countQuery = `SELECT COUNT(DISTINCT p.paper_id) AS total 
-                   FROM author_accessible_papers p 
-                   LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id
-                   WHERE p.author_id = ?`;
-      params = [req.user.id];
-      countParams = [req.user.id];
-    } else if (req.user.role === 'expert') {
-      // 专家只能查看review_assignments表中关联的论文
-      query = `SELECT DISTINCT p.*, pp.status AS progress, ra.conclusion, ra.status AS review_status, ra.submission_date AS review_submission_date 
-               FROM papers p
-               LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id
-               INNER JOIN review_assignments ra ON p.paper_id = ra.paper_id
-               WHERE ra.expert_id = ?`;
-      countQuery = `SELECT COUNT(DISTINCT p.paper_id) AS total 
-                   FROM papers p
-                   INNER JOIN review_assignments ra ON p.paper_id = ra.paper_id
-                   WHERE ra.expert_id = ?`;
-      params = [req.user.id];
-      countParams = [req.user.id];
-    } else {
-      // 编辑查看所有论文
-      query = `SELECT p.*, pp.status AS progress 
-               FROM papers p
-               LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id`;
-      countQuery = `SELECT COUNT(*) AS total FROM papers p
-                    LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id`;
-    }
-    
-    // 添加过滤条件
-    if (progress) {
-      // 根据查询是否已有WHERE子句来决定使用WHERE还是AND
-      const queryConnector = req.user.role === 'editor' && !id && !search ? ' WHERE' : ' AND';
-      query += `${queryConnector} pp.status = ?`;
-      countQuery += `${queryConnector} pp.status = ?`;
-      params.push(progress);
-      countParams.push(progress);
-    }
-    
-    // 专家特有的过滤条件
-    if (req.user.role === 'expert') {
-      if (req.query.conclusion) {
-        query += ' AND ra.conclusion = ?';
-        countQuery += ' AND ra.conclusion = ?';
-        params.push(req.query.conclusion);
-        countParams.push(req.query.conclusion);
-      }
-      
-      if (req.query.review_status) {
-        query += ' AND ra.status = ?';
-        countQuery += ' AND ra.status = ?';
-        params.push(req.query.review_status);
-        countParams.push(req.query.review_status);
-      }
-      
-      if (req.query.review_start_date) {
-        query += ' AND ra.submission_date >= ?';
-        countQuery += ' AND ra.submission_date >= ?';
-        params.push(req.query.review_start_date);
-        countParams.push(req.query.review_start_date);
-      }
-      
-      if (req.query.review_end_date) {
-        query += ' AND ra.submission_date <= ?';
-        countQuery += ' AND ra.submission_date <= ?';
-        params.push(req.query.review_end_date);
-        countParams.push(req.query.review_end_date);
-      }
-    }
-    
-    if (id) {
-      // 根据查询是否已有WHERE子句来决定使用WHERE还是AND
-      const hasWhereClause = (req.user.role !== 'editor') || progress;
-      const queryConnector = hasWhereClause ? ' AND' : ' WHERE';
-      query += `${queryConnector} p.paper_id = ?`;
-      countQuery += `${queryConnector} p.paper_id = ?`;
-      params.push(id);
-      countParams.push(id);
-    }
-    
-    if (search && !id) { // 如果指定了ID搜索，则不执行模糊搜索
-      // 根据查询是否已有WHERE子句来决定使用WHERE还是AND
-      const hasWhereClause = (req.user.role !== 'editor') || progress || id;
-      const queryConnector = hasWhereClause ? ' AND' : ' WHERE';
-      query += `${queryConnector} (p.title_zh LIKE ? OR p.title_en LIKE ? OR p.abstract_zh LIKE ? OR p.abstract_en LIKE ?)`;
-      countQuery += `${queryConnector} (p.title_zh LIKE ? OR p.title_en LIKE ? OR p.abstract_zh LIKE ? OR p.abstract_en LIKE ?)`;
-      const searchParam = `%${search}%`;
-      params.push(searchParam, searchParam, searchParam, searchParam);
-      countParams.push(searchParam, searchParam, searchParam, searchParam);
-    }
-    
-    // 添加排序
+    // 验证排序参数
     const validSortColumns = ['submission_date', 'title_zh', 'title_en', 'progress'];
     const validSortOrders = ['ASC', 'DESC'];
     const sortColumn = validSortColumns.includes(sortBy) ? sortBy : 'submission_date';
     const order = validSortOrders.includes(sortOrder.toUpperCase()) ? sortOrder.toUpperCase() : 'DESC';
     
-    query += ` ORDER BY ${sortColumn} ${order} LIMIT ? OFFSET ?`;
-    params.push(size, offset);
+    let query, queryParams, countQuery, countQueryParams;
     
-    // 执行查询
-    const [papers] = await pool.execute(query, params);
-    const [countResult] = await pool.execute(countQuery, countParams);
+    // 为作者角色使用非常简单的查询格式
+    if (req.user.role === 'author') {
+      if (id) {
+        // ID查询 - 最基本形式
+        query = "SELECT DISTINCT p.*, pp.status AS progress FROM author_accessible_papers p LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id WHERE p.author_id = ? AND p.paper_id = ? ORDER BY " + sortColumn + " " + order + " LIMIT ? OFFSET ?";
+        queryParams = [req.user.id, id, size, offset];
+        countQuery = "SELECT COUNT(DISTINCT p.paper_id) AS total FROM author_accessible_papers p LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id WHERE p.author_id = ? AND p.paper_id = ?";
+        countQueryParams = [req.user.id, id];
+      } else if (progress && search) {
+        // 进度+搜索
+        const searchParam = "%" + search + "%";
+        query = "SELECT DISTINCT p.*, pp.status AS progress FROM author_accessible_papers p LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id WHERE p.author_id = ? AND pp.status = ? AND (p.title_zh LIKE ? OR p.title_en LIKE ? OR p.abstract_zh LIKE ? OR p.abstract_en LIKE ?) ORDER BY " + sortColumn + " " + order + " LIMIT ? OFFSET ?";
+        queryParams = [req.user.id, progress, searchParam, searchParam, searchParam, searchParam, size, offset];
+        countQuery = "SELECT COUNT(DISTINCT p.paper_id) AS total FROM author_accessible_papers p LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id WHERE p.author_id = ? AND pp.status = ? AND (p.title_zh LIKE ? OR p.title_en LIKE ? OR p.abstract_zh LIKE ? OR p.abstract_en LIKE ?)";
+        countQueryParams = [req.user.id, progress, searchParam, searchParam, searchParam, searchParam];
+      } else if (progress) {
+        // 只有进度
+        query = "SELECT DISTINCT p.*, pp.status AS progress FROM author_accessible_papers p LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id WHERE p.author_id = ? AND pp.status = ? ORDER BY " + sortColumn + " " + order + " LIMIT ? OFFSET ?";
+        queryParams = [req.user.id, progress, size, offset];
+        countQuery = "SELECT COUNT(DISTINCT p.paper_id) AS total FROM author_accessible_papers p LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id WHERE p.author_id = ? AND pp.status = ?";
+        countQueryParams = [req.user.id, progress];
+      } else if (search) {
+        // 只有搜索
+        const searchParam = "%" + search + "%";
+        query = "SELECT DISTINCT p.*, pp.status AS progress FROM author_accessible_papers p LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id WHERE p.author_id = ? AND (p.title_zh LIKE ? OR p.title_en LIKE ? OR p.abstract_zh LIKE ? OR p.abstract_en LIKE ?) ORDER BY " + sortColumn + " " + order + " LIMIT ? OFFSET ?";
+        queryParams = [req.user.id, searchParam, searchParam, searchParam, searchParam, size, offset];
+        countQuery = "SELECT COUNT(DISTINCT p.paper_id) AS total FROM author_accessible_papers p LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id WHERE p.author_id = ? AND (p.title_zh LIKE ? OR p.title_en LIKE ? OR p.abstract_zh LIKE ? OR p.abstract_en LIKE ?)";
+        countQueryParams = [req.user.id, searchParam, searchParam, searchParam, searchParam];
+      } else {
+        // 基本查询 - 最简化形式
+        query = "SELECT DISTINCT p.*, pp.status AS progress FROM author_accessible_papers p LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id WHERE p.author_id = ? ORDER BY " + sortColumn + " " + order + " LIMIT ? OFFSET ?";
+        queryParams = [req.user.id, size, offset];
+        countQuery = "SELECT COUNT(DISTINCT p.paper_id) AS total FROM author_accessible_papers p LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id WHERE p.author_id = ?";
+        countQueryParams = [req.user.id];
+      }
+    }
+    // 专家角色查询
+    else if (req.user.role === 'expert') {
+      if (id) {
+        query = "SELECT DISTINCT p.*, pp.status AS progress, ra.conclusion, ra.status AS review_status, ra.submission_date AS review_submission_date FROM papers p LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id INNER JOIN review_assignments ra ON p.paper_id = ra.paper_id WHERE ra.expert_id = ? AND p.paper_id = ? ORDER BY " + sortColumn + " " + order + " LIMIT ? OFFSET ?";
+        queryParams = [req.user.id, id, size, offset];
+        countQuery = "SELECT COUNT(DISTINCT p.paper_id) AS total FROM papers p LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id INNER JOIN review_assignments ra ON p.paper_id = ra.paper_id WHERE ra.expert_id = ? AND p.paper_id = ?";
+        countQueryParams = [req.user.id, id];
+      } else {
+        // 构建WHERE子句
+        const conditions = [];
+        const params = [req.user.id];
+        
+        if (progress) { conditions.push("pp.status = ?"); params.push(progress); }
+        if (conclusion) { conditions.push("ra.conclusion = ?"); params.push(conclusion); }
+        if (review_status) { conditions.push("ra.status = ?"); params.push(review_status); }
+        if (review_start_date) { conditions.push("ra.submission_date >= ?"); params.push(review_start_date); }
+        if (review_end_date) { conditions.push("ra.submission_date <= ?"); params.push(review_end_date); }
+        if (search) {
+          conditions.push("(p.title_zh LIKE ? OR p.title_en LIKE ? OR p.abstract_zh LIKE ? OR p.abstract_en LIKE ?)");
+          const searchParam = "%" + search + "%";
+          params.push(searchParam, searchParam, searchParam, searchParam);
+        }
+        
+        let whereClause = "WHERE ra.expert_id = ?";
+        if (conditions.length > 0) {
+          whereClause += " AND " + conditions.join(" AND ");
+        }
+        
+        query = "SELECT DISTINCT p.*, pp.status AS progress, ra.conclusion, ra.status AS review_status, ra.submission_date AS review_submission_date FROM papers p LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id INNER JOIN review_assignments ra ON p.paper_id = ra.paper_id " + whereClause + " ORDER BY " + sortColumn + " " + order + " LIMIT ? OFFSET ?";
+        queryParams = [...params, size, offset];
+        countQuery = "SELECT COUNT(DISTINCT p.paper_id) AS total FROM papers p LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id INNER JOIN review_assignments ra ON p.paper_id = ra.paper_id " + whereClause;
+        countQueryParams = [...params];
+      }
+    }
+    // 编辑角色查询
+    else {
+      if (id) {
+        query = "SELECT p.*, pp.status AS progress FROM papers p LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id WHERE p.paper_id = ? ORDER BY " + sortColumn + " " + order + " LIMIT ? OFFSET ?";
+        queryParams = [id, size, offset];
+        countQuery = "SELECT COUNT(*) AS total FROM papers p LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id WHERE p.paper_id = ?";
+        countQueryParams = [id];
+      } else if (progress && search) {
+        const searchParam = "%" + search + "%";
+        query = "SELECT p.*, pp.status AS progress FROM papers p LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id WHERE pp.status = ? AND (p.title_zh LIKE ? OR p.title_en LIKE ? OR p.abstract_zh LIKE ? OR p.abstract_en LIKE ?) ORDER BY " + sortColumn + " " + order + " LIMIT ? OFFSET ?";
+        queryParams = [progress, searchParam, searchParam, searchParam, searchParam, size, offset];
+        countQuery = "SELECT COUNT(*) AS total FROM papers p LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id WHERE pp.status = ? AND (p.title_zh LIKE ? OR p.title_en LIKE ? OR p.abstract_zh LIKE ? OR p.abstract_en LIKE ?)";
+        countQueryParams = [progress, searchParam, searchParam, searchParam, searchParam];
+      } else if (progress) {
+        query = "SELECT p.*, pp.status AS progress FROM papers p LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id WHERE pp.status = ? ORDER BY " + sortColumn + " " + order + " LIMIT ? OFFSET ?";
+        queryParams = [progress, size, offset];
+        countQuery = "SELECT COUNT(*) AS total FROM papers p LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id WHERE pp.status = ?";
+        countQueryParams = [progress];
+      } else if (search) {
+        const searchParam = "%" + search + "%";
+        query = "SELECT p.*, pp.status AS progress FROM papers p LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id WHERE p.title_zh LIKE ? OR p.title_en LIKE ? OR p.abstract_zh LIKE ? OR p.abstract_en LIKE ? ORDER BY " + sortColumn + " " + order + " LIMIT ? OFFSET ?";
+        queryParams = [searchParam, searchParam, searchParam, searchParam, size, offset];
+        countQuery = "SELECT COUNT(*) AS total FROM papers p LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id WHERE p.title_zh LIKE ? OR p.title_en LIKE ? OR p.abstract_zh LIKE ? OR p.abstract_en LIKE ?";
+        countQueryParams = [searchParam, searchParam, searchParam, searchParam];
+      } else {
+        query = "SELECT p.*, pp.status AS progress FROM papers p LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id ORDER BY " + sortColumn + " " + order + " LIMIT ? OFFSET ?";
+        queryParams = [size, offset];
+        countQuery = "SELECT COUNT(*) AS total FROM papers p LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id";
+        countQueryParams = [];
+      }
+    }
+    
+    // 执行查询 - 使用query方法代替execute方法
+    const papers = await pool.query(query, queryParams);
+    
+    const countResult = await pool.query(countQuery, countQueryParams);
     const total = countResult[0].total;
     const totalPages = Math.ceil(total / size);
     
     // 返回分页结果
     res.json({
-      items: papers,
+      items: papers[0],
       total,
       page: pageNum,
       pageSize: size,
       totalPages
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('查询错误:', error);
+    res.status(500).json({ 
+      message: '获取论文列表失败: ' + error.message
+    });
   }
 });
 
