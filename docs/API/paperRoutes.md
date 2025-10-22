@@ -38,7 +38,19 @@
 - **Authorization**: 需要 JWT 令牌
 - **Query Parameters**:
   - `id` (string): 按论文ID精确搜索（优先，若有则不考虑其他条件）
-  - `progress` (string): 按论文状态过滤
+  - `progress` (string): 按论文状态过滤，可选值：
+    - Draft(草稿), 
+    - Initial Reviewing(初审中), 
+    - Reviewing(评审中), 
+    - Revisioning(修改中), 
+    - Second Reviewing(二次评审), 
+    - Final Review Completed(最终评审完成), 
+    - Final Reviewing(最终评审中), 
+    - Paying(支付中), 
+    - Scheduling(排期中), 
+    - Published(已发表), 
+    - Accept(已录用), 
+    - Reject(已拒绝)
   - `search` (string): 搜索关键词，会在标题（中、英文）和摘要（中、英文）中进行模糊搜索
   - `sortBy` (string): 排序字段，可选值：submission_date, title_zh, title_en, progress，默认值为 submission_date
   - `sortOrder` (string): 排序顺序，可选值：ASC, DESC，默认值为 DESC

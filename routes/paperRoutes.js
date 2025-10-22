@@ -254,7 +254,7 @@ router.get('/', authenticateToken, async (req, res) => {
     const papers = await pool.query(query, queryParams);
     
     const countResult = await pool.query(countQuery, countQueryParams);
-    const total = countResult[0].total;
+    const total = countResult[0][0].total;
     const totalPages = Math.ceil(total / size);
     
     // 返回分页结果
