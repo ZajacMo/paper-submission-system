@@ -100,38 +100,82 @@ router.get('/progress', authenticateToken, authorizeRole(['author']), async (req
 });
 
 
-// 获取所有论文（作者只能看自己的，编辑和专家可以看所有）
+// 获取论文列表（支持分页、过滤和排序）
+/**
+ * @api {get} /papers 获取论文列表
+ * @apiDescription 获取论文列表，支持分页、过滤和排序功能
+ * @apiParam {string} [progress] 按论文状态过滤
+ * @apiParam {string} [search] 搜索关键词（标题、摘要）
+ * @apiParam {string} [id] 按论文ID精确搜索
+ * @apiParam {string} [sortBy=submission_date] 排序字段（submission_date、title_zh、title_en、progress）
+ * @apiParam {string} [sortOrder=DESC] 排序方向（ASC、DESC）
+ * @apiParam {number} [page=1] 页码
+ * @apiParam {number} [pageSize=10] 每页条数
+ * @apiSuccess {array} items 论文列表
+ * @apiSuccess {number} total 总数
+ * @apiSuccess {number} page 当前页码
+ * @apiSuccess {number} pageSize 每页条数
+ * @apiSuccess {number} totalPages 总页数
+ */
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    let query, params = [];
-    const { progress, search, id, sortBy = 'submission_date', sortOrder = 'DESC' } = req.query;
+    let query, countQuery, params = [], countParams = [];
+    const { 
+      progress, 
+      search, 
+      id, 
+      sortBy = 'submission_date', 
+      sortOrder = 'DESC',
+      page = 1,
+      pageSize = 10
+    } = req.query;
+    
+    // 验证并转换分页参数
+    const pageNum = parseInt(page) || 1;
+    const size = parseInt(pageSize) || 10;
+    const offset = (pageNum - 1) * size;
     
     if (req.user.role === 'author') {
       // 使用作者可访问论文视图
-      query = `SELECT DISTINCT p.* 
+      query = `SELECT DISTINCT p.*, pp.status AS progress 
                FROM author_accessible_papers p 
+               LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id
                WHERE p.author_id = ?`;
+      countQuery = `SELECT COUNT(DISTINCT p.paper_id) AS total 
+                   FROM author_accessible_papers p 
+                   LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id
+                   WHERE p.author_id = ?`;
       params = [req.user.id];
+      countParams = [req.user.id];
     } else {
       // 编辑和专家查看所有论文
-      query = 'SELECT * FROM papers';
+      query = `SELECT p.*, pp.status AS progress 
+               FROM papers p
+               LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id`;
+      countQuery = `SELECT COUNT(*) AS total FROM papers`;
     }
     
     // 添加过滤条件
     if (progress) {
-      query += ' AND progress = ?';
+      query += ' AND pp.status = ?';
+      countQuery += ' AND pp.status = ?';
       params.push(progress);
+      countParams.push(progress);
     }
     
     if (id) {
-      query += ' AND paper_id = ?';
+      query += ' AND p.paper_id = ?';
+      countQuery += ' AND p.paper_id = ?';
       params.push(id);
+      countParams.push(id);
     }
     
     if (search && !id) { // 如果指定了ID搜索，则不执行模糊搜索
-      query += ` AND (title_zh LIKE ? OR title_en LIKE ? OR abstract_zh LIKE ? OR abstract_en LIKE ?)`;
+      query += ` AND (p.title_zh LIKE ? OR p.title_en LIKE ? OR p.abstract_zh LIKE ? OR p.abstract_en LIKE ?)`;
+      countQuery += ` AND (p.title_zh LIKE ? OR p.title_en LIKE ? OR p.abstract_zh LIKE ? OR p.abstract_en LIKE ?)`;
       const searchParam = `%${search}%`;
       params.push(searchParam, searchParam, searchParam, searchParam);
+      countParams.push(searchParam, searchParam, searchParam, searchParam);
     }
     
     // 添加排序
@@ -140,10 +184,23 @@ router.get('/', authenticateToken, async (req, res) => {
     const sortColumn = validSortColumns.includes(sortBy) ? sortBy : 'submission_date';
     const order = validSortOrders.includes(sortOrder.toUpperCase()) ? sortOrder.toUpperCase() : 'DESC';
     
-    query += ` ORDER BY ${sortColumn} ${order}`;
+    query += ` ORDER BY ${sortColumn} ${order} LIMIT ? OFFSET ?`;
+    params.push(size, offset);
     
+    // 执行查询
     const [papers] = await pool.execute(query, params);
-    res.json(papers);
+    const [countResult] = await pool.execute(countQuery, countParams);
+    const total = countResult[0].total;
+    const totalPages = Math.ceil(total / size);
+    
+    // 返回分页结果
+    res.json({
+      items: papers,
+      total,
+      page: pageNum,
+      pageSize: size,
+      totalPages
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

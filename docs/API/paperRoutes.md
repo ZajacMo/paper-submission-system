@@ -42,24 +42,31 @@
   - `search` (string): 搜索关键词，会在标题（中、英文）和摘要（中、英文）中进行模糊搜索（当指定了id参数时，此参数将被忽略）
   - `sortBy` (string): 排序字段，可选值：submission_date, title_zh, title_en, progress，默认值为 submission_date
   - `sortOrder` (string): 排序顺序，可选值：ASC, DESC，默认值为 DESC
+  - `page` (number): 页码，默认值为 1
+  - `pageSize` (number): 每页条数，默认值为 10
 - **Access Control**:
   - 作者：只能查看自己参与的论文
   - 编辑和专家：可以查看所有论文
 - **Response**: 
 ```json
-[{
-  "paper_id": "number", 
-  "title_zh": "string", 
-  "title_en": "string", 
-  "abstract_zh": "string", 
-  "abstract_en": "string", 
-  "attachment_path": "string",
-  "progress": "string",
-  "integrity": "string",
-  "check_time": "datetime",
-  "submission_date": "datetime"
-}]
-```
+{
+  "items": [{
+    "paper_id": "number", 
+    "title_zh": "string", 
+    "title_en": "string", 
+    "abstract_zh": "string", 
+    "abstract_en": "string", 
+    "attachment_path": "string",
+    "progress": "string",
+    "integrity": "string",
+    "check_time": "datetime",
+    "submission_date": "datetime"
+  }],
+  "total": "number",
+  "page": "number",
+  "pageSize": "number",
+  "totalPages": "number"
+}```
 
 ## 获取论文详情
 - **URL**: `/api/papers/:id`

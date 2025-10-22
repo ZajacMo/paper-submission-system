@@ -79,7 +79,7 @@ SELECT
   p.attachment_path,
   p.submission_date,
   p.update_date,
-  p.progress,
+  pp.`status` AS progress,
   p.integrity,
   p.check_time,
   COUNT(DISTINCT ra.assignment_id) AS `review_times`,
@@ -90,7 +90,8 @@ SELECT
   GROUP_CONCAT(DISTINCT CONCAT(f.`fund_id`, ':', f.`project_name`, ':', f.`project_number`) SEPARATOR '|') AS `funds_info`
 FROM 
   `papers` p
-
+LEFT JOIN 
+  `paper_progress` pp ON p.`paper_id` = pp.`paper_id`
 LEFT JOIN `review_assignments` ra ON p.`paper_id` = ra.`paper_id` AND ra.`submission_date` IS NOT NULL
 LEFT JOIN 
   `paper_authors_institutions` pai ON p.`paper_id` = pai.`paper_id`
@@ -115,7 +116,7 @@ GROUP BY
   p.attachment_path,
   p.submission_date,
   p.update_date,
-  p.progress,
+  pp.`status`,
   p.integrity,
   p.check_time;
 
@@ -300,6 +301,33 @@ SELECT
 FROM `withdrawals` w
 JOIN `review_assignments` ra ON w.`assignment_id` = ra.`assignment_id`
 JOIN `papers` p ON ra.`paper_id` = p.`paper_id`;
+
+-- 论文进度视图（根据papers表status或review_progress确定当前状态）
+CREATE VIEW `paper_progress` AS
+SELECT 
+  p.`paper_id`,
+  CASE
+    WHEN p.`status` IN ('Reject', 'Accept') THEN p.`status`
+    ELSE 
+      CASE
+        WHEN prp.`payment_stage` = 'finished' AND prp.`schedule_stage` = 'finished' THEN 'Published'
+        WHEN prp.`payment_stage` = 'finished' THEN 'Scheduling'
+        WHEN prp.`acceptance_stage` = 'finished' THEN 'Paying'
+        WHEN prp.`re_review_stage2` = 'finished' THEN 'Final Review Completed'
+        WHEN prp.`re_review_stage1` = 'finished' AND prp.`revision_stage` = 'finished' THEN 'Final Reviewing'
+        WHEN prp.`re_review_stage1` = 'finished' THEN 'Revisioning'
+        WHEN prp.`review_stage` = 'finished' AND prp.`revision_stage` = 'finished' THEN 'Second Reviewing'
+        WHEN prp.`revision_stage` = 'finished' THEN 'Revisioning'
+        WHEN prp.`initial_review_stage` = 'finished'AND p.`integrity` = `True` THEN 'Reviewing'
+        WHEN prp.`initial_review_stage` = 'finished' THEN 'Revisioning'
+        WHEN prp.`submission_stage` = 'finished' THEN 'Initial Reviewing'
+        ELSE 'Draft'
+      END
+  END AS `status`
+FROM 
+  `papers` p
+LEFT JOIN 
+  `paper_review_progress` prp ON p.`paper_id` = prp.`paper_id`;
 
 -- ========================== 索引设计 ==========================
 
