@@ -124,14 +124,24 @@
 - **URL**: `/api/papers/:id/integrity`
 - **Method**: `PUT`
 - **Description**: 编辑检查并更新论文的完整性状态
-- **Request Body**: `{"is_complete": "boolean"}`
+- **权限要求**: 仅编辑角色
+- **Authorization**: 需要 JWT 令牌
+- **Request Body**: 
+```json
+{
+  "integrity": "string" // 有效值: 'True', 'False', 'Waiting'
+}
+```
 - **Response**: 
 ```json
 {
-  "message": "string", 
-  "is_complete": "boolean"
+  "message": "论文完整性检查完成"
 }
 ```
+- **失败响应**:
+  - 400: `{"message": "无效的完整性状态，有效状态为：True, False, Waiting"}`
+  - 404: `{"message": "论文不存在"}`
+  - 500: `{"message": "错误信息"}`
 
 ## 上传论文附件
 - **URL**: `/api/papers/upload-attachment`

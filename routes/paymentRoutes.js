@@ -101,7 +101,7 @@ router.post('/withdrawals', authenticateToken, authorizeRole(['expert']), async 
     
     // 检查是否已经提交过提现申请
     const [existingWithdrawals] = await pool.execute(
-      `SELECT * FROM withdrawals WHERE assignment_id = ?`,
+      `SELECT * FROM withdrawals WHERE assignment_id = ? AND status = 1`,
       [assignment_id]
     );
     
