@@ -44,9 +44,14 @@
   - `sortOrder` (string): 排序顺序，可选值：ASC, DESC，默认值为 DESC
   - `page` (number): 页码，默认值为 1
   - `pageSize` (number): 每页条数，默认值为 10
+  - `conclusion` (string): 专家角色特有，按审稿结论过滤
+  - `review_status` (string): 专家角色特有，按审稿状态过滤
+  - `review_start_date` (date): 专家角色特有，按审稿提交开始日期过滤
+  - `review_end_date` (date): 专家角色特有，按审稿提交结束日期过滤
 - **Access Control**:
   - 作者：只能查看自己参与的论文
-  - 编辑和专家：可以查看所有论文
+  - 编辑：可以查看所有论文
+  - 专家：只能查看review_assignments表中与自己关联的论文
 - **Response**: 
 ```json
 {
@@ -60,13 +65,17 @@
     "progress": "string",
     "integrity": "string",
     "check_time": "datetime",
-    "submission_date": "datetime"
+    "submission_date": "datetime",
+    "conclusion": "string",  // 仅专家角色返回
+    "review_status": "string",  // 仅专家角色返回
+    "review_submission_date": "datetime"  // 仅专家角色返回
   }],
   "total": "number",
   "page": "number",
   "pageSize": "number",
   "totalPages": "number"
-}```
+}
+```
 
 ## 获取论文详情
 - **URL**: `/api/papers/:id`

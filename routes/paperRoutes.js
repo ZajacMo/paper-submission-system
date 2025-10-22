@@ -147,32 +147,85 @@ router.get('/', authenticateToken, async (req, res) => {
                    WHERE p.author_id = ?`;
       params = [req.user.id];
       countParams = [req.user.id];
+    } else if (req.user.role === 'expert') {
+      // 专家只能查看review_assignments表中关联的论文
+      query = `SELECT DISTINCT p.*, pp.status AS progress, ra.conclusion, ra.status AS review_status, ra.submission_date AS review_submission_date 
+               FROM papers p
+               LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id
+               INNER JOIN review_assignments ra ON p.paper_id = ra.paper_id
+               WHERE ra.expert_id = ?`;
+      countQuery = `SELECT COUNT(DISTINCT p.paper_id) AS total 
+                   FROM papers p
+                   INNER JOIN review_assignments ra ON p.paper_id = ra.paper_id
+                   WHERE ra.expert_id = ?`;
+      params = [req.user.id];
+      countParams = [req.user.id];
     } else {
-      // 编辑和专家查看所有论文
+      // 编辑查看所有论文
       query = `SELECT p.*, pp.status AS progress 
                FROM papers p
                LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id`;
-      countQuery = `SELECT COUNT(*) AS total FROM papers`;
+      countQuery = `SELECT COUNT(*) AS total FROM papers p
+                    LEFT JOIN paper_progress pp ON p.paper_id = pp.paper_id`;
     }
     
     // 添加过滤条件
     if (progress) {
-      query += ' AND pp.status = ?';
-      countQuery += ' AND pp.status = ?';
+      // 根据查询是否已有WHERE子句来决定使用WHERE还是AND
+      const queryConnector = req.user.role === 'editor' && !id && !search ? ' WHERE' : ' AND';
+      query += `${queryConnector} pp.status = ?`;
+      countQuery += `${queryConnector} pp.status = ?`;
       params.push(progress);
       countParams.push(progress);
     }
     
+    // 专家特有的过滤条件
+    if (req.user.role === 'expert') {
+      if (req.query.conclusion) {
+        query += ' AND ra.conclusion = ?';
+        countQuery += ' AND ra.conclusion = ?';
+        params.push(req.query.conclusion);
+        countParams.push(req.query.conclusion);
+      }
+      
+      if (req.query.review_status) {
+        query += ' AND ra.status = ?';
+        countQuery += ' AND ra.status = ?';
+        params.push(req.query.review_status);
+        countParams.push(req.query.review_status);
+      }
+      
+      if (req.query.review_start_date) {
+        query += ' AND ra.submission_date >= ?';
+        countQuery += ' AND ra.submission_date >= ?';
+        params.push(req.query.review_start_date);
+        countParams.push(req.query.review_start_date);
+      }
+      
+      if (req.query.review_end_date) {
+        query += ' AND ra.submission_date <= ?';
+        countQuery += ' AND ra.submission_date <= ?';
+        params.push(req.query.review_end_date);
+        countParams.push(req.query.review_end_date);
+      }
+    }
+    
     if (id) {
-      query += ' AND p.paper_id = ?';
-      countQuery += ' AND p.paper_id = ?';
+      // 根据查询是否已有WHERE子句来决定使用WHERE还是AND
+      const hasWhereClause = (req.user.role !== 'editor') || progress;
+      const queryConnector = hasWhereClause ? ' AND' : ' WHERE';
+      query += `${queryConnector} p.paper_id = ?`;
+      countQuery += `${queryConnector} p.paper_id = ?`;
       params.push(id);
       countParams.push(id);
     }
     
     if (search && !id) { // 如果指定了ID搜索，则不执行模糊搜索
-      query += ` AND (p.title_zh LIKE ? OR p.title_en LIKE ? OR p.abstract_zh LIKE ? OR p.abstract_en LIKE ?)`;
-      countQuery += ` AND (p.title_zh LIKE ? OR p.title_en LIKE ? OR p.abstract_zh LIKE ? OR p.abstract_en LIKE ?)`;
+      // 根据查询是否已有WHERE子句来决定使用WHERE还是AND
+      const hasWhereClause = (req.user.role !== 'editor') || progress || id;
+      const queryConnector = hasWhereClause ? ' AND' : ' WHERE';
+      query += `${queryConnector} (p.title_zh LIKE ? OR p.title_en LIKE ? OR p.abstract_zh LIKE ? OR p.abstract_en LIKE ?)`;
+      countQuery += `${queryConnector} (p.title_zh LIKE ? OR p.title_en LIKE ? OR p.abstract_zh LIKE ? OR p.abstract_en LIKE ?)`;
       const searchParam = `%${search}%`;
       params.push(searchParam, searchParam, searchParam, searchParam);
       countParams.push(searchParam, searchParam, searchParam, searchParam);

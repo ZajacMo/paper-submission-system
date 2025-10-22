@@ -2,71 +2,20 @@
 
 -- ========================== 视图设计 ==========================
 
--- 1. 作者信息视图（包含作者基本信息和所属单位）
-CREATE VIEW `author_with_institutions` AS
-SELECT 
-  a.`author_id`,
-  a.`name`,
-  a.`age`,
-  a.`email`,
-  a.`degree`,
-  a.`title`,
-  a.`hometown`,
-  a.`research_areas`,
-  a.`bio`,
-  a.`phone`,
-  GROUP_CONCAT(DISTINCT i.`name` SEPARATOR ', ') AS `institution_names`,
-  GROUP_CONCAT(DISTINCT i.`city` SEPARATOR ', ') AS `cities`
-FROM 
-  `authors` a
-LEFT JOIN 
-  `author_institutions` ai ON a.`author_id` = ai.`author_id`
-LEFT JOIN 
-  `institutions` i ON ai.`institution_id` = i.`institution_id`
-GROUP BY 
-  a.`author_id`;
 
--- 2. 论文详细信息视图（包含作者、关键词、基金等信息）
-CREATE VIEW `paper_details` AS
-SELECT 
-  p.`paper_id`,
-  p.`title_zh`,
-  p.`title_en`,
-  p.`abstract_zh`,
-  p.`abstract_en`,
-  p.`attachment_path`,
-  p.`submission_date`,
-  p.`progress`,
-  p.`integrity`,
-  GROUP_CONCAT(DISTINCT CONCAT(a.`name`, IF(pai.`is_corresponding`, ' (通讯作者)', '')) SEPARATOR ', ') AS `author_names`,
-  GROUP_CONCAT(DISTINCT k.`keyword_name` SEPARATOR ', ') AS `keywords`,
-  GROUP_CONCAT(DISTINCT f.`project_name` SEPARATOR ', ') AS `funds`
-FROM 
-  `papers` p
-LEFT JOIN 
-  `paper_authors_institutions` pai ON p.`paper_id` = pai.`paper_id`
-LEFT JOIN 
-  `authors` a ON pai.`author_id` = a.`author_id`
-LEFT JOIN 
-  `paper_keywords` pk ON p.`paper_id` = pk.`paper_id`
-LEFT JOIN 
-  `keywords` k ON pk.`keyword_id` = k.`keyword_id`
-LEFT JOIN 
-  `paper_funds` pf ON p.`paper_id` = pf.`paper_id`
-LEFT JOIN 
-  `funds` f ON pf.`fund_id` = f.`fund_id`
-GROUP BY 
-  p.`paper_id`;
 
--- 3. 作者论文视图（获取特定作者的所有论文及是否通讯作者信息）
+-- 3. 作者论文视图（获取特定作者的所有论文、是否通讯作者信息及进度状态）
 CREATE VIEW `author_papers_full` AS
 SELECT 
   p.*,
-  pai.`is_corresponding`
+  pai.`is_corresponding`,
+  pp.`status` AS progress
 FROM 
   `papers` p
 INNER JOIN 
-  `paper_authors_institutions` pai ON p.`paper_id` = pai.`paper_id`;
+  `paper_authors_institutions` pai ON p.`paper_id` = pai.`paper_id`
+LEFT JOIN
+  `paper_progress` pp ON p.`paper_id` = pp.`paper_id`;
 
 -- 4. 论文完整详情视图（包含作者、关键词、基金、审稿意见和状态等完整信息）
 CREATE VIEW `paper_full_details` AS
@@ -218,15 +167,18 @@ FROM
 JOIN 
   `experts` e ON ra.`expert_id` = e.`expert_id`;
 
--- 6. 作者可查看的论文视图（包含权限过滤）
+-- 6. 作者可查看的论文视图（包含权限过滤和进度信息）
 CREATE VIEW `author_accessible_papers` AS
 SELECT DISTINCT
   p.*,
-  pai.`author_id`
+  pai.`author_id`,
+  pp.`status` AS progress
 FROM 
   `papers` p
 INNER JOIN 
-  `paper_authors_institutions` pai ON p.`paper_id` = pai.`paper_id`;
+  `paper_authors_institutions` pai ON p.`paper_id` = pai.`paper_id`
+LEFT JOIN
+  `paper_progress` pp ON p.`paper_id` = pp.`paper_id`;
 
 -- 3. 审稿专家信息视图
 CREATE VIEW `expert_with_institutions` AS
@@ -272,7 +224,7 @@ CREATE VIEW `expert_review_assignments` AS
 SELECT 
   ra.*,
   p.title_zh,
-  p.title_en 
+  p.title_en
 FROM review_assignments ra
 JOIN papers p ON ra.paper_id = p.paper_id;
 
