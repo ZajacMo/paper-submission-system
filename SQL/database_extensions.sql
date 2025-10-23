@@ -71,85 +71,104 @@ GROUP BY
 
 -- 5. 论文审稿进度视图（向作者展示论文的各阶段审稿进度）
 CREATE VIEW `paper_review_progress` AS
-SELECT 
-  p.`paper_id`,
-  p.`title_zh`,
-  p.`title_en`,
-  
-  -- 收稿阶段
-  CASE WHEN p.`attachment_path` IS NOT NULL THEN 'finished' ELSE 'processing' END AS `submission_stage`,
-  CASE WHEN p.`attachment_path` IS NOT NULL THEN p.`submission_date` ELSE NULL END AS `submission_time`,
-  
-  -- 初审阶段
-  CASE WHEN p.`check_time` IS NOT NULL THEN 'finished' ELSE 'processing' END AS `initial_review_stage`,
-  p.`check_time` AS `initial_review_time`,
-  
-  -- 评审阶段
-  CASE 
-    WHEN (SELECT COUNT(*) FROM `review_assignments` ra WHERE ra.`paper_id` = p.`paper_id` AND ra.`submission_date` IS NOT NULL) >= 3 THEN 'finished'
-    ELSE 'processing'
-  END AS `review_stage`,
-  CASE
-    WHEN (SELECT COUNT(*) FROM `review_assignments` ra WHERE ra.`paper_id` = p.`paper_id` AND ra.`submission_date` IS NOT NULL) >= 3
-    THEN (SELECT MIN(top3_dates.`submission_date`) FROM (
-      SELECT `submission_date` FROM `review_assignments` ra WHERE ra.`paper_id` = p.`paper_id` AND ra.`submission_date` IS NOT NULL ORDER BY `submission_date` ASC LIMIT 3
-    ) AS top3_dates ORDER BY top3_dates.`submission_date` DESC LIMIT 1)
-    ELSE NULL
-  END AS `review_time`,
-  
-  -- 修改阶段
-  CASE 
-    WHEN p.`update_date` > (SELECT MIN(n.`sent_at`) FROM `notifications` n WHERE n.`paper_id` = p.`paper_id` AND n.`notification_type` IN ('Review Assignment')) THEN 'finished'
-    ELSE 'processing'
-  END AS `revision_stage`,
-  CASE 
-    WHEN p.`update_date` > (SELECT MIN(n.`sent_at`) FROM `notifications` n WHERE n.`paper_id` = p.`paper_id` AND n.`notification_type` IN ('Review Assignment')) THEN p.`update_date`
-    ELSE NULL
-  END AS `revision_time`,
-  
-  -- 复审阶段
-  CASE 
-    WHEN (SELECT COUNT(*) FROM `review_assignments` ra WHERE ra.`paper_id` = p.`paper_id` AND ra.`submission_date` IS NOT NULL) >= 6 THEN 'finished'
-    ELSE 'processing'
-  END AS `re_review_stage1`,
-  CASE
-    WHEN (SELECT COUNT(*) FROM `review_assignments` ra WHERE ra.`paper_id` = p.`paper_id` AND ra.`submission_date` IS NOT NULL) >= 6
-    THEN (SELECT ra.`submission_date` FROM `review_assignments` ra WHERE ra.`paper_id` = p.`paper_id` ORDER BY ra.`submission_date` DESC LIMIT 5, 1)
-    ELSE NULL
-  END AS `re_review_time1`,
-  
-  
-  CASE 
-    WHEN (SELECT COUNT(*) FROM `review_assignments` ra WHERE ra.`paper_id` = p.`paper_id` AND ra.`submission_date` IS NOT NULL) = 9 THEN 'finished'
-    ELSE 'processing'
-  END AS `re_review_stage2`,
-  CASE
-    WHEN (SELECT COUNT(*) FROM `review_assignments` ra WHERE ra.`paper_id` = p.`paper_id` AND ra.`submission_date` IS NOT NULL) = 9
-    THEN (SELECT MAX(ra.`submission_date`) FROM `review_assignments` ra WHERE ra.`paper_id` = p.`paper_id`)
-    ELSE NULL
-  END AS `re_review_time2`,
-  
-  -- 录用阶段
-  CASE 
-    WHEN EXISTS (SELECT 1 FROM `notifications` n WHERE n.`paper_id` = p.`paper_id` AND n.`notification_type` = 'Acceptance Notification') THEN 'finished'
-    ELSE 'processing'
-  END AS `acceptance_stage`,
-  (SELECT n.`sent_at` FROM `notifications` n WHERE n.`paper_id` = p.`paper_id` AND n.`notification_type` = 'Acceptance Notification' LIMIT 1) AS `acceptance_time`,
-  
-  -- 支付版面费阶段
-  CASE 
-    WHEN (SELECT pa.`payment_date` FROM `payments` pa WHERE pa.`paper_id` = p.`paper_id`) IS NOT NULL THEN 'finished'
-    ELSE 'processing'
-  END AS `payment_stage`,
-  (SELECT pa.`payment_date` FROM `payments` pa WHERE pa.`paper_id` = p.`paper_id`) AS `payment_time`,
-  
-  -- 排期阶段
-  CASE 
-    WHEN EXISTS (SELECT 1 FROM `schedules` s WHERE s.`paper_id` = p.`paper_id`) THEN 'finished'
-    ELSE 'processing'
-  END AS `schedule_stage`,
-FROM 
-  `papers` p;
+select `p`.`paper_id`                                                                           AS `paper_id`,
+`p`.`title_zh`                                                                           AS `title_zh`,
+  `p`.`title_en`                                                                           AS `title_en`,
+  (case when (`p`.`attachment_path` is not null) then 'finished' else 'processing' end)    AS `submission_stage`,
+  (case when (`p`.`attachment_path` is not null) then `p`.`submission_date` else NULL end) AS `submission_time`,
+  (case
+      when (`p`.`check_time` is not null) then 'finished'
+      else 'processing' end)                                                              AS `initial_review_stage`,
+`p`.`check_time`                                                                         AS `initial_review_time`,
+  (case
+      when ((select count(0)
+              from `paper_submission_system`.`review_assignments` `ra`
+              where ((`ra`.`paper_id` = `p`.`paper_id`) 
+                    and (`ra`.`submission_date` is not null))
+            ) >= 3)
+          then 'finished'
+      else 'processing' end)                                                              AS `review_stage`,
+  (case
+      when ((select count(0)
+              from `paper_submission_system`.`review_assignments` `ra`
+              where ((`ra`.`paper_id` = `p`.`paper_id`) 
+                    and (`ra`.`submission_date` is not null))
+            ) >= 3)
+          then (select min(`top3_dates`.`submission_date`)
+                from (select `ra`.`submission_date` AS `submission_date`
+                      from `paper_submission_system`.`review_assignments` `ra`
+                      where ((`ra`.`paper_id` = `p`.`paper_id`) 
+                            and (`ra`.`submission_date` is not null))
+                      order by `ra`.`submission_date`
+                      limit 3) `top3_dates`
+                order by `top3_dates`.`submission_date` desc
+                limit 1)
+      else NULL end)                                                                      AS `review_time`,
+  (case
+      when (`p`.`update_date` > (select min(`n`.`sent_at`)
+                                  from `paper_submission_system`.`notifications` `n`
+                                  where ((`n`.`paper_id` = `p`.`paper_id`) and
+                                        (`n`.`notification_type` = 'Review Assignment')))) then 'finished'
+      else 'processing' end)                                                              AS `revision_stage`,
+  (case
+      when (`p`.`update_date` > (select min(`n`.`sent_at`)
+                                  from `paper_submission_system`.`notifications` `n`
+                                  where ((`n`.`paper_id` = `p`.`paper_id`) and
+                                        (`n`.`notification_type` = 'Review Assignment')))) then `p`.`update_date`
+      else NULL end)                                                                      AS `revision_time`,
+  (case
+      when ((select count(0)
+              from `paper_submission_system`.`review_assignments` `ra`
+              where ((`ra`.`paper_id` = `p`.`paper_id`) and (`ra`.`submission_date` is not null))) >= 6)
+          then 'finished'
+      else 'processing' end)                                                              AS `re_review_stage1`,
+  (case
+      when ((select count(0)
+              from `paper_submission_system`.`review_assignments` `ra`
+              where ((`ra`.`paper_id` = `p`.`paper_id`) and (`ra`.`submission_date` is not null))) >= 6)
+          then (select `ra`.`submission_date`
+                from `paper_submission_system`.`review_assignments` `ra`
+                where (`ra`.`paper_id` = `p`.`paper_id`)
+                order by `ra`.`submission_date` desc
+                limit 5,1)
+      else NULL end)                                                                      AS `re_review_time1`,
+  (case
+      when ((select count(0)
+              from `paper_submission_system`.`review_assignments` `ra`
+              where ((`ra`.`paper_id` = `p`.`paper_id`) and (`ra`.`submission_date` is not null))) = 9)
+          then 'finished'
+      else 'processing' end)                                                              AS `re_review_stage2`,
+  (case
+      when ((select count(0)
+              from `paper_submission_system`.`review_assignments` `ra`
+              where ((`ra`.`paper_id` = `p`.`paper_id`) and (`ra`.`submission_date` is not null))) = 9)
+          then (select max(`ra`.`submission_date`)
+                from `paper_submission_system`.`review_assignments` `ra`
+                where (`ra`.`paper_id` = `p`.`paper_id`))
+      else NULL end)                                                                      AS `re_review_time2`,
+  (case
+      when exists(select 1
+                  from `paper_submission_system`.`notifications` `n`
+                  where ((`n`.`paper_id` = `p`.`paper_id`) and
+                          (`n`.`notification_type` = 'Acceptance Notification'))) then 'finished'
+      else 'processing' end)                                                              AS `acceptance_stage`,
+  (select `n`.`sent_at`
+  from `paper_submission_system`.`notifications` `n`
+  where ((`n`.`paper_id` = `p`.`paper_id`) and (`n`.`notification_type` = 'Acceptance Notification'))
+  limit 1)                                                                                AS `acceptance_time`,
+  (case
+      when ((select `pa`.`payment_date`
+              from `paper_submission_system`.`payments` `pa`
+              where (`pa`.`paper_id` = `p`.`paper_id`)) is not null) then 'finished'
+      else 'processing' end)                                                              AS `payment_stage`,
+  (select `pa`.`payment_date`
+  from `paper_submission_system`.`payments` `pa`
+  where (`pa`.`paper_id` = `p`.`paper_id`))                                               AS `payment_time`,
+  (case
+      when exists(select 1 from `paper_submission_system`.`schedules` `s` where (`s`.`paper_id` = `p`.`paper_id`))
+          then 'finished'
+      else 'processing' end)                                                              AS `schedule_stage`
+from `paper_submission_system`.`papers` `p`
 
 -- 5. 论文审稿意见视图（包含专家审稿意见）
 CREATE VIEW `paper_review_details` AS
