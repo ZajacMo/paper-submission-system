@@ -21,6 +21,23 @@ router.get('/assignments', authenticateToken, authorizeRole(['expert']), async (
   }
 });
 
+// 获取专家的未读任务数量
+router.get('/assignments/unread-count', authenticateToken, authorizeRole(['expert']), async (req, res) => {
+  try {
+    const [countResult] = await pool.execute(
+      `SELECT COUNT(*) AS unread_count 
+       FROM review_assignments 
+       WHERE expert_id = ? AND is_read = 0`,
+      [req.user.id]
+    );
+    
+    res.json({ unread_count: countResult[0].unread_count });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+    console.error('获取专家未读任务数量失败:', error);
+  }
+});
+
 // 编辑批量分配审稿任务并发送评审任务书
 router.post('/assignments', authenticateToken, authorizeRole(['editor']), async (req, res) => {
   try {
@@ -99,6 +116,34 @@ router.post('/assignments', authenticateToken, authorizeRole(['editor']), async 
   }
 });
 
+// 专家标记审稿任务为已读
+router.put('/assignments/:id/read', authenticateToken, authorizeRole(['expert']), async (req, res) => {
+  try {
+    const assignmentId = req.params.id;
+    
+    // 检查该任务是否分配给当前专家
+    const [check] = await pool.execute(
+      `SELECT COUNT(*) AS count FROM review_assignments WHERE assignment_id = ? AND expert_id = ?`,
+      [assignmentId, req.user.id]
+    );
+    
+    if (check[0].count === 0) {
+      return res.status(403).json({ message: '无权处理该审稿任务' });
+    }
+    
+    // 更新is_read状态为1
+    await pool.execute(
+      `UPDATE review_assignments SET is_read = 1 WHERE assignment_id = ?`,
+      [assignmentId]
+    );
+    
+    res.json({ message: '任务已标记为已读' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+    console.error('标记任务为已读失败:', error);
+  }
+});
+
 // 专家提交审稿意见
 router.put('/assignments/:id', authenticateToken, authorizeRole(['expert']), async (req, res) => {
   try {
@@ -174,16 +219,16 @@ router.get('/papers/:paperId/expert', authenticateToken, authorizeRole(['editor'
     
     // 查询论文的当前状态
     const [progress] = await pool.execute(
-      'SELECT progress_status FROM paper_progress WHERE paper_id = ?', 
+      'SELECT status FROM paper_progress WHERE paper_id = ?', 
       [paperId]
     );
     
     let editable = false;
     
     if (progress.length > 0) {
-      const paperStatus = progress[0].progress_status;
+      const paperStatus = progress[0].status;
       
-      if (paperStatus === 'reviewing') {
+      if (paperStatus === 'Reviewing') {
         // 查询review_assignments表中是否存在该论文的对应记录
         const [assignments] = await pool.execute(
           'SELECT COUNT(*) as count FROM review_assignments WHERE paper_id = ?', 
@@ -215,9 +260,9 @@ router.get('/papers/:paperId/expert', authenticateToken, authorizeRole(['editor'
     
     // 查询该论文的所有审稿专家分配记录，只获取最近的三条
     const [experts] = await pool.execute(
-      `SELECT ra.*, e.name AS expert_name, e.institution, e.research_areas 
+      `SELECT ra.*, e.name AS expert_name, e.institution_names, e.research_areas 
        FROM review_assignments ra 
-       JOIN experts e ON ra.expert_id = e.expert_id 
+       JOIN expert_with_institutions e ON ra.expert_id = e.expert_id 
        WHERE ra.paper_id = ?
        ORDER BY ra.assigned_date DESC`,
       [paperId]

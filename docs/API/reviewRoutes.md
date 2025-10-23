@@ -28,6 +28,33 @@
   - 403: `{"message": "权限不足"}`
   - 500: `{"message": "查询失败"}`
 
+## 获取专家的未读任务数量
+- **URL**: `/api/reviews/assignments/unread-count`
+- **Method**: `GET`
+- **Description**: 获取当前登录专家的未读审稿任务数量（状态为Assigned的任务）
+- **权限**: 仅专家角色可访问
+- **Response**: 
+  ```json
+  {
+    "unread_count": "number"
+  }
+  ```
+- **失败响应**:
+  - 401: `{"message": "未授权"}`
+  - 403: `{"message": "权限不足"}`
+  - 500: `{"message": "查询失败"}`
+
+## 专家标记审稿任务为已读
+- **URL**: `/api/reviews/assignments/:id/read`
+- **Method**: `PUT`
+- **Description**: 将指定的审稿任务标记为已读
+- **权限**: 仅专家角色可访问，且只能标记分配给自己的任务
+- **Response**: `{"message": "任务已标记为已读"}`
+- **失败响应**:
+  - 401: `{"message": "未授权"}`
+  - 403: `{"message": "无权处理该审稿任务"}`
+  - 500: `{"message": "标记失败"}`
+
 ## 编辑批量分配审稿任务
 - **URL**: `/api/reviews/assignments`
 - **Method**: `POST`

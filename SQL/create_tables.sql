@@ -198,6 +198,7 @@ CREATE TABLE `review_assignments` (
   `assigned_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `assigned_due_date` DATETIME NOT NULL,
   `submission_date` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `is_read` BOOLEAN NOT NULL DEFAULT FALSE,
   PRIMARY KEY (`assignment_id`),
   INDEX `fk_review_assignments_experts_idx` (`expert_id` ASC),
   INDEX `fk_review_assignments_editors_idx` (`editor_id` ASC),
