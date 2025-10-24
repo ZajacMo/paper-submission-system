@@ -318,17 +318,7 @@ ALTER TABLE `experts` ADD FULLTEXT INDEX `idx_experts_search` (`name`, `research
 
 -- ========================== 触发器设计 ==========================
 
--- 1. 当审稿任务完成时，更新论文状态
-DELIMITER $$
-CREATE TRIGGER `trg_review_assignment_completed`
-AFTER UPDATE ON `review_assignments`
-FOR EACH ROW
-BEGIN
-  UPDATE `papers`
-  SET `progress` = 'Finished'
-  WHERE `paper_id` = NEW.`paper_id`;
-END$$
-DELIMITER ;
+
 
 -- 2. 当支付状态更新为'Paid'时，记录支付日期
 DELIMITER $$

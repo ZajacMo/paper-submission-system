@@ -19,7 +19,8 @@
       "conclusion": "string",
       "status": "string",
       "title_zh": "string",
-      "title_en": "string"
+      "title_en": "string",
+      "is_read": "boolean"
     }
   ]
   ```

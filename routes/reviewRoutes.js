@@ -170,6 +170,7 @@ router.put('/assignments/:id', authenticateToken, authorizeRole(['expert']), asy
     res.json({ message: '审稿意见提交成功' });
   } catch (error) {
     res.status(500).json({ message: error.message });
+    console.error('审稿意见提交失败:', error);
   }
 });
 
