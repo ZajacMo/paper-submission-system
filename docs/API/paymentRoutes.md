@@ -18,6 +18,28 @@
 }
 ```
 
+## 获取论文支付信息
+- **URL**: `/api/payments/papers/:paperId`
+- **Method**: `GET`
+- **Description**: 作者获取自己论文的支付状态信息
+- **权限**: 所有已登录用户，但作者只能查看自己论文的支付信息
+- **成功响应** (200): 
+```json
+[
+  {
+    "payment_id": "number",
+    "paper_id": "number",
+    "amount": "number",
+    "status": "string",
+    "payment_date": "datetime"
+  }
+]
+```
+- **错误响应**:
+  - 401: `{"message": "未授权"}`
+  - 403: `{"message": "无权查看该论文的支付信息"}`
+  - 500: `{"message": "错误信息"}`
+
 ## 更新支付状态
 - **URL**: `/api/payments/:id/status`
 - **Method**: `PUT`
