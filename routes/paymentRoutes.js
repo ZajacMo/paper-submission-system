@@ -33,6 +33,55 @@ router.get('/papers/:paperId', authenticateToken, async (req, res) => {
   }
 });
 
+// 作者支付审稿费
+router.post('/author/pay', authenticateToken, authorizeRole(['author']), async (req, res) => {
+  try {
+    const { paper_id, amount } = req.body;
+    
+    // 验证参数
+    if (!paper_id || !amount) {
+      return res.status(400).json({ message: '论文ID和金额是必需的' });
+    }
+    
+    // 检查用户是否为该论文的作者
+    const [authorCheck] = await pool.execute(
+      `SELECT COUNT(*) AS count 
+       FROM paper_authors_institutions 
+       WHERE paper_id = ? AND author_id = ?`,
+      [paper_id, req.user.id]
+    );
+    
+    if (authorCheck[0].count === 0) {
+      return res.status(403).json({ message: '您不是该论文的作者，无权支付' });
+    }
+    
+    // 检查论文是否存在
+    const [papers] = await pool.execute('SELECT * FROM papers WHERE paper_id = ?', [paper_id]);
+    if (papers.length === 0) {
+      return res.status(404).json({ message: '论文不存在' });
+    }
+    
+    // 检查是否已经有支付记录
+    const [existingPayments] = await pool.execute('SELECT * FROM payments WHERE paper_id = ?', [paper_id]);
+    if (existingPayments.length > 0) {
+      updatePayment = await pool.execute(
+        `UPDATE payments SET status = 'Pending' WHERE paper_id = ? AND status = 'Paid'`,
+        [paper_id]
+      );
+      if (updatePayment[0].affectedRows === 0) {
+        return res.status(500).json({ message: '更新支付记录失败' });
+      }
+    }
+    else
+      return res.status(400).json({ message: '该论文未创建支付记录' });
+    
+    
+    res.status(201).json({ message: '支付申请提交成功', paper_id, payment_id: updatePayment[0].insertId });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // 创建支付记录（编辑）
 router.post('/', authenticateToken, authorizeRole(['editor']), async (req, res) => {
   try {

@@ -40,6 +40,32 @@
   - 403: `{"message": "无权查看该论文的支付信息"}`
   - 500: `{"message": "错误信息"}`
 
+## 作者支付审稿费
+- **URL**: `/api/payments/author/pay`
+- **Method**: `POST`
+- **Description**: 作者为自己的论文更新支付状态为Pending（仅更新已存在且状态为Paid的支付记录）
+- **权限**: 仅作者角色
+- **Request Body**: 
+```json
+{
+  "paper_id": "number",
+  "amount": "number"
+}
+```
+- **成功响应** (201): 
+```json
+{
+  "message": "支付申请提交成功",
+  "paper_id": "number",
+  "payment_id": "number"
+}
+```
+- **错误响应**:
+  - 400: `{"message": "论文ID和金额是必需的"}` 或 `{"message": "该论文未创建支付记录"}`
+  - 403: `{"message": "您不是该论文的作者，无权支付"}`
+  - 404: `{"message": "论文不存在"}`
+  - 500: `{"message": "错误信息"}` 或 `{"message": "更新支付记录失败"}`
+
 ## 更新支付状态
 - **URL**: `/api/payments/:id/status`
 - **Method**: `PUT`
