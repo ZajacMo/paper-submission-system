@@ -65,7 +65,7 @@ router.post('/author/pay', authenticateToken, authorizeRole(['author']), async (
     const [existingPayments] = await pool.execute('SELECT * FROM payments WHERE paper_id = ?', [paper_id]);
     if (existingPayments.length > 0) {
       updatePayment = await pool.execute(
-        `UPDATE payments SET status = 'Pending' WHERE paper_id = ? AND status = 'Paid'`,
+        `UPDATE payments SET status = 'Paid' WHERE paper_id = ? `,
         [paper_id]
       );
       if (updatePayment[0].affectedRows === 0) {
