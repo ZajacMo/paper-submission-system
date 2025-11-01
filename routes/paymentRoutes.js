@@ -36,11 +36,11 @@ router.get('/papers/:paperId', authenticateToken, async (req, res) => {
 // 作者支付审稿费
 router.post('/author/pay', authenticateToken, authorizeRole(['author']), async (req, res) => {
   try {
-    const { paper_id, amount } = req.body;
+    const { paper_id} = req.body;
     
     // 验证参数
-    if (!paper_id || !amount) {
-      return res.status(400).json({ message: '论文ID和金额是必需的' });
+    if (!paper_id) {
+      return res.status(400).json({ message: '论文ID是必需的' });
     }
     
     // 检查用户是否为该论文的作者
