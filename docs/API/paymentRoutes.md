@@ -48,8 +48,7 @@
 - **Request Body**: 
 ```json
 {
-  "paper_id": "number",
-  "amount": "number"
+  "paper_id": "number"
 }
 ```
 - **成功响应** (201): 
@@ -61,7 +60,7 @@
 }
 ```
 - **错误响应**:
-  - 400: `{"message": "论文ID和金额是必需的"}` 或 `{"message": "该论文未创建支付记录"}`
+  - 400: `{"message": "论文ID是必需的"}` 或 `{"message": "该论文未创建支付记录"}`
   - 403: `{"message": "您不是该论文的作者，无权支付"}`
   - 404: `{"message": "论文不存在"}`
   - 500: `{"message": "错误信息"}` 或 `{"message": "更新支付记录失败"}`

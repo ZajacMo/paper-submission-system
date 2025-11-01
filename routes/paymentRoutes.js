@@ -36,7 +36,7 @@ router.get('/papers/:paperId', authenticateToken, async (req, res) => {
 // 作者支付审稿费
 router.post('/author/pay', authenticateToken, authorizeRole(['author']), async (req, res) => {
   try {
-    const { paper_id} = req.body;
+    const {paper_id} = req.body;
     
     // 验证参数
     if (!paper_id) {
