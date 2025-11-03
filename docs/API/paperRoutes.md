@@ -37,33 +37,19 @@
 - **Description**: 获取论文列表，支持分页、过滤和排序功能（根据用户角色返回不同范围的论文）
 - **Authorization**: 需要 JWT 令牌
 - **Query Parameters**:
-  - `id` (string): 按论文ID精确搜索（优先，若有则不考虑其他条件）
-  - `progress` (string): 按论文状态过滤，可选值：
-    - Draft(草稿), 
-    - Initial Reviewing(初审中), 
-    - Reviewing(评审中), 
-    - Revisioning(修改中), 
-    - Second Reviewing(二次评审), 
-    - Final Review Completed(最终评审完成), 
-    - Final Reviewing(最终评审中), 
-    - Paying(支付中), 
-    - Scheduling(排期中), 
-    - Published(已发表), 
-    - Accept(已录用), 
-    - Reject(已拒绝)
-  - `status` (string): 论文状态筛选（仅编辑可用）
-  - `status_read` (boolean): 论文状态已读标志筛选（仅编辑可用）
-  - `search` (string): 搜索关键词，会在标题（中、英文）和摘要（中、英文）中进行模糊搜索
+  - `id` (number): 按论文ID精确搜索（优先，若有则不考虑其他）
+  - `progress` (string): 按论文进度过滤
+  - `search` (string): 搜索关键词，会在标题（中、英文）和摘要（中、英文）中进行模糊搜索（当指定了id参数时，此参数将被忽略）
   - `sortBy` (string): 排序字段，可选值：submission_date, title_zh, title_en, progress, status, status_read，默认值为 submission_date
   - `sortOrder` (string): 排序顺序，可选值：ASC, DESC，默认值为 DESC
-  - `page` (number): 页码，默认值为 1
-  - `pageSize` (number): 每页条数，默认值为 10
+  - `page` (number): 页码，默认为1
+  - `pageSize` (number): 每页大小，默认为10
+  - `status` (string): 论文状态过滤（仅编辑角色可用）
+  - `status_read` (boolean): 论文状态已读标志过滤（仅编辑角色可用）
   - `conclusion` (string): 专家角色特有，按审稿结论过滤
   - `review_status` (string): 专家角色特有，按审稿状态过滤
   - `review_start_date` (string): 专家角色特有，按审稿提交开始日期过滤
   - `review_end_date` (string): 专家角色特有，按审稿提交结束日期过滤
-  - `page` (number): 页码，默认为1
-  - `pageSize` (number): 每页大小，默认为10
 - **Access Control**:
   - 作者：只能查看自己参与的论文（通过author_accessible_papers视图）
   - 编辑：可以查看所有论文
@@ -245,7 +231,7 @@
 ## 获取论文审稿进度
 - **URL**: `/api/papers/:id/progress`
 - **Method**: `GET`
-- **Description**: 获取指定论文的审稿进度信息
+- **Description**: 获取指定论文的审稿进度信息，包括审稿专家信息、审稿状态等
 - **权限要求**: 作者（只能查看自己参与的论文）、专家、编辑
 - **请求参数**:
   - URL参数: `id` (论文ID)
@@ -254,43 +240,52 @@
   ```json
   {
     "paper_id": 1,
-    "title_zh": "论文标题(中文)",
-    "title_en": "Paper Title(English)",
-    
-    "submission_stage": "finished",
-    "submission_time": "2023-05-01 10:30:00",
-    
-    "initial_review_stage": "finished",
-    "initial_review_time": "2023-05-02 14:15:00",
-    
-    "review_stage": "finished",
-    "review_time": "2023-05-10 16:45:00",
-    
-    "revision_stage": "processing",
-    "revision_time": null,
-    
-    "re_review_stage1": "processing",
-    "re_review_time1": null,
-    
-    "re_review_stage2": "processing",
-    "re_review_time2": null,
-    
-    "acceptance_stage": "processing",
-    "acceptance_time": null,
-    
-    "payment_stage": "processing",
-    "payment_time": null,
-    
-    "schedule_stage": "processing",
-    "schedule_time": null
+    "title_zh": "中文标题示例",
+    "title_en": "English Title Example",
+    "reviewers": [
+      {
+        "reviewer_id": 1,
+        "fullname": "李四",
+        "review_status": "completed",
+        "review_date": "2023-07-10T14:20:00Z",
+        "review_content": "这是一篇高质量的论文..."
+      },
+      {
+        "reviewer_id": 2,
+        "fullname": "王五",
+        "review_status": "pending",
+        "review_date": null,
+        "review_content": null
+      }
+    ],
+    "overall_progress": "partially_reviewed"
   }
   ```
-  - 每个阶段的状态值为"processing"(处理中)或"finished"(已完成)
-  - 完成时间仅在状态为"finished"时显示具体时间，否则为null
 - **失败响应**:
   - 403: `{"message": "无权访问该论文的审稿进度"}`
   - 404: `{"message": "未找到该论文的审稿进度"}`
   - 500: `{"message": "查询失败"}`
+
+## 获取论文状态信息
+- **URL**: `/api/papers/:id/status`
+- **Method**: `GET`
+- **Description**: 获取指定论文的状态信息，包括 status 和 status_read 字段
+- **权限要求**: 作者（只能查看自己参与的论文）、专家、编辑
+- **请求参数**:
+  - URL参数: `id` (论文ID)
+  - Header: `Authorization`: Bearer JWT令牌
+- **成功响应**:
+  ```json
+  {
+    "paper_id": 1,
+    "status": "需要修改",
+    "status_read": false
+  }
+  ```
+- **失败响应**:
+  - 403: `{"message": "无权查看该论文的状态"}`
+  - 404: `{"message": "论文不存在"}`
+  - 500: `{"message": "获取论文状态失败: 错误信息"}`
 
 ## 获取论文状态信息
 - **URL**: `/api/papers/:id/status`
