@@ -60,8 +60,7 @@ function parseAuthorsInfo(authorsInfo) {
     author_id: fields[0],
     name: fields[1],
     institution_name: fields[2],
-    institution_id: fields[3],
-    is_corresponding: fields[4] === '1'
+    is_corresponding: fields[3] == '1'
   }));
 }
 
