@@ -42,10 +42,10 @@ router.post('/author', authenticateToken, authorizeRole(['editor']), async (req,
     const { paper_id, notification_type, deadline } = req.body;
     
     // 验证通知类型
-    const validNotificationTypes = ['Acceptance Notification', 'Rejection Notification', 'Revision Notification', 'Review Assignment', 'Payment Confirmation'];
+    const validNotificationTypes = ['Acceptance Notification', 'Rejection Notification', 'Review Assignment', 'Payment Confirmation'];
     if (!notification_type || !validNotificationTypes.includes(notification_type)) {
       return res.status(400).json({ 
-        message: '无效的通知类型，有效类型为：Acceptance Notification, Rejection Notification, Revision Notification, Review Assignment, Payment Confirmation'
+        message: '无效的通知类型，有效类型为：Acceptance Notification, Rejection Notification, Review Assignment, Payment Confirmation'
       });
     }
     

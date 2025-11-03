@@ -1,10 +1,42 @@
 # 用户管理模块
 
+## 搜索专家
+- **URL**: `/api/users/search-experts`
+- **Method**: `GET`
+- **Description**: 根据专家ID、姓名或研究领域搜索专家信息，支持所有已登录用户访问，提供分页功能
+- **Authorization**: 需要 JWT 令牌
+- **Query Parameters**:
+  - `query` (必填): 搜索关键词，可输入专家ID、姓名或研究领域
+  - `page` (可选): 页码，默认为1
+  - `limit` (可选): 每页数量，默认为10
+- **Success Response**:
+  ```json
+  {
+    "experts": [
+      {
+        "expert_id": "number",
+        "name": "string",
+        "title": "string",
+        "research_areas": "string"
+      },
+      ...
+    ],
+    "pagination": {
+      "total": "number",
+      "page": "number",
+      "limit": "number",
+      "totalPages": "number"
+    }
+  }
+  ```
+- **Error Response**: `{"message": "请输入专家ID、姓名或研究领域"}` (400), `{"message": "错误信息"}` (500)
+
 ## 根据输入的作者ID或姓名查询作者
 - **URL**: `/api/users/search`
 - **Method**: `GET`
 - **Description**: 根据输入的作者ID或姓名模糊查询作者信息，支持部分匹配
-- **Access**: 需要 author 角色权限
+- **Authorization**: 需要 JWT 令牌
+- **Access Control**: 需要 author 角色权限
 - **Query Parameters**: `query` (作者ID或姓名)
 - **Success Response**: `[{"author_id": "number", "name": "string"}, ...]` (作者列表)
 - **Error Response**: `{"message": "请输入作者ID或姓名"}` (400), `{"message": "作者不存在"}` (404), `{"message": "错误信息"}` (500)
@@ -13,18 +45,109 @@
 - **URL**: `/api/users/profile`
 - **Method**: `GET`
 - **Description**: 获取当前登录用户的个人信息
-- **Response**: `{"name": "string", "email": "string", "phone": "string", "role": "string", "institutions": "string", "cities": "string", ...}`
+- **Authorization**: 需要 JWT 令牌
+- **Success Response**:
+  - 作者角色: 
+    ```json
+    {
+      "author_id": "number",
+      "name": "string",
+      "email": "string",
+      "phone": "string",
+      "age": "number",
+      "degree": "string",
+      "title": "string",
+      "hometown": "string",
+      "research_areas": "string",
+      "bio": "string",
+      "institutions": [{"institution_id": "number", "name": "string", ...}]
+    }
+    ```
+  - 专家角色: 
+    ```json
+    {
+      "expert_id": "number",
+      "name": "string",
+      "email": "string",
+      "phone": "string",
+      "title": "string",
+      "research_areas": "string",
+      "review_fee": "number",
+      "bank_account": "string",
+      "bank_name": "string",
+      "account_holder": "string",
+      "institutions": [{"institution_id": "number", "name": "string", ...}]
+    }
+    ```
+  - 编辑角色: 
+    ```json
+    {
+      "editor_id": "number",
+      "name": "string",
+      "email": "string",
+      "institutions": []
+    }
+    ```
+- **Error Response**: `{"message": "用户不存在"}` (404), `{"message": "无效的用户角色"}` (400), `{"message": "错误信息"}` (500)
 
 ## 更新个人信息
 - **URL**: `/api/users/profile`
 - **Method**: `PUT`
 - **Description**: 更新当前登录用户的个人信息
-- **Request Body**: `{"name": "string", "email": "string", "phone": "string", ...}`
-- **Response**: `{"message": "string"}`
+- **Authorization**: 需要 JWT 令牌
+- **Request Body**:
+  - 作者角色: 
+    ```json
+    {
+      "name": "string",
+      "email": "string",
+      "phone": "string",
+      "age": "number",
+      "degree": "string",
+      "title": "string",
+      "hometown": "string",
+      "research_areas": "string",
+      "bio": "string"
+    }
+    ```
+  - 专家角色: 
+    ```json
+    {
+      "name": "string",
+      "email": "string",
+      "phone": "string",
+      "title": "string",
+      "research_areas": "string",
+      "review_fee": "number",
+      "bank_account": "string",
+      "bank_name": "string",
+      "account_holder": "string"
+    }
+    ```
+  - 编辑角色: 
+    ```json
+    {
+      "name": "string",
+      "email": "string"
+    }
+    ```
+- **Success Response**: `{"message": "用户信息更新成功"}`
+- **Error Response**: `{"message": "用户不存在"}` (404), `{"message": "无效的用户角色"}` (400), `{"message": "错误信息"}` (500)
 
-## 专家更新完整个人信息
-- **URL**: `/api/users/profile` (专家角色)
-- **Method**: `PUT`
-- **Description**: 专家更新所有个人信息，包括银行账户信息
-- **Request Body**: `{"name": "string", "email": "string", "phone": "string", "title": "string", "research_areas": "string", "review_fee": "number", "bank_account": "string", "bank_name": "string", "account_holder": "string"}`
-- **Response**: `{"message": "string"}`
+## 编辑获取所有作者列表
+- **URL**: `/api/users/authors`
+- **Method**: `GET`
+- **Description**: 编辑角色获取系统中所有作者的列表
+- **Authorization**: 需要 JWT 令牌
+- **Access Control**: 需要 editor 角色权限
+- **Success Response**: `[{"author_id": "number", "name": "string", "email": "string", ...}, ...]` (作者列表)
+- **Error Response**: `{"message": "错误信息"}` (500)
+
+## 编辑获取所有专家列表
+- **URL**: `/api/users/experts`
+- **Method**: `GET`
+- **Description**: 编辑角色获取系统中所有专家的列表
+- **Authorization**: 需要 JWT 令牌
+- **Access Control**: 需要 editor 角色权限
+- **Success Response**: `[{"expert_id": "number", "name": "string", "email": "string", ...}, ...]` (专家列表)
+- **Error Response**: `{"message": "错误信息"}` (500)

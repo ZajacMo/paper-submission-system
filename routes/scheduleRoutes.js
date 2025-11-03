@@ -80,6 +80,42 @@ router.get('/papers/:id', authenticateToken, authorizeRole(['editor']), async (r
   }
 });
 
+// 作者获取自己论文的排期记录
+router.get('/author/papers/:id', authenticateToken, authorizeRole(['author']), async (req, res) => {
+  try {
+    const paperId = req.params.id;
+    
+    // 检查用户是否为该论文的作者
+    const [authorCheck] = await pool.execute(
+      `SELECT COUNT(*) AS count 
+       FROM paper_authors_institutions 
+       WHERE paper_id = ? AND author_id = ?`,
+      [paperId, req.user.id]
+    );
+    
+    if (authorCheck[0].count === 0) {
+      return res.status(403).json({ message: '您不是该论文的作者，无权查看排期信息' });
+    }
+    
+    // 查询排期记录
+    const [schedules] = await pool.execute(
+      `SELECT s.*, p.title_zh, p.title_en 
+       FROM schedules s 
+       JOIN papers p ON s.paper_id = p.paper_id
+       WHERE s.paper_id = ?`,
+      [paperId]
+    );
+    
+    if (schedules.length === 0) {
+      return res.status(404).json({ message: '未找到该论文的排期记录' });
+    }
+    
+    res.json(schedules[0]);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // 编辑更新排期记录
 router.put('/:id', authenticateToken, authorizeRole(['editor']), async (req, res) => {
   try {

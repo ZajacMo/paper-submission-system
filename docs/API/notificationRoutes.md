@@ -21,21 +21,28 @@
 - **URL**: `/api/notifications/author`
 - **Method**: `POST`
 - **Description**: 编辑发送通知给论文相关作者
+- **Authorization**: 需要 JWT 令牌
+- **Access Control**: 仅编辑角色可访问
 - **Request Body**: 
 ```json
 {
     "paper_id": "number", 
-    "notification_type": "Acceptance Notification/Rejection Notification/Major Revision/Review Assignment/Payment Confirmation", 
-    "deadline": "datetime"
+    "notification_type": "Acceptance Notification/Rejection Notification/Review Assignment/Payment Confirmation", 
+    "deadline": "datetime" (可选，仅当notification_type为Revision Notification时必需)
 }
 ```
-- **Response**: 
+- **Success Response**: 
 ```json
 {
-    "message": "string", 
+    "message": "通知发送成功", 
     "notification_id": "number"
 }
 ```
+- **Error Response**:
+  - 400: `{"message": "无效的通知类型，有效类型为：Acceptance Notification, Rejection Notification, Review Assignment, Payment Confirmation"}`
+  - 400: `{"message": "修稿通知必须提供截止时间"}`
+  - 404: `{"message": "论文不存在"}`
+  - 500: `{"message": "错误信息"}`
 
 ## 标记通知为已读
 - **URL**: `/api/notifications/:id/read`

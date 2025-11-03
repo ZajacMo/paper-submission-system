@@ -166,6 +166,60 @@ router.get('/experts', authenticateToken, authorizeRole(['editor']), async (req,
   }
 });
 
+// 搜索专家API（所有角色均可访问）
+router.get('/search-experts', authenticateToken, async (req, res) => {
+  try {
+    const { query, page = 1, limit = 10 } = req.query;
+    const pageNum = parseInt(page) || 1;
+    const pageSize = parseInt(limit) || 10;
+    const offset = (pageNum - 1) * pageSize;
+    // console.log(pageNum, pageSize, offset);
+    
+    if (!query) {
+      return res.status(400).json({ message: '请输入专家ID、姓名或研究领域' });
+    }
+    
+    // 使用简单直接的查询方式，避免动态SQL构建
+    const searchTerm = `%${query}%`;
+    
+    // 计算总数 - 使用OR条件统一处理
+    const countQuery = `
+      SELECT COUNT(*) as total 
+      FROM experts 
+      WHERE CAST(expert_id AS CHAR) LIKE ? 
+         OR name LIKE ? 
+         OR research_areas LIKE ?
+    `;
+    const [countResult] = await pool.execute(countQuery, [searchTerm, searchTerm, searchTerm]);
+    const total = countResult[0]?.total || 0;
+    
+    // 获取分页数据 - 直接将LIMIT和OFFSET值拼接到SQL中，避免参数绑定问题
+    const dataQuery = `
+      SELECT expert_id, name, title, research_areas 
+      FROM experts 
+      WHERE CAST(expert_id AS CHAR) LIKE ? 
+         OR name LIKE ? 
+         OR research_areas LIKE ? 
+      LIMIT ${pageSize} OFFSET ${offset}
+    `;
+    // 只绑定搜索条件的参数
+    const [experts] = await pool.execute(dataQuery, [searchTerm, searchTerm, searchTerm]);
+    
+    res.json({
+      experts,
+      pagination: {
+        total,
+        page: pageNum,
+        limit: pageSize,
+        totalPages: total > 0 ? Math.ceil(total / pageSize) : 0
+      }
+    });
+  } catch (error) {
+    console.error('搜索专家出错:', error);
+    res.status(500).json({ message: '搜索专家时发生错误' });
+  }
+});
+
 module.exports = router;
 
 //根据输入的作者ID或姓名查询作者

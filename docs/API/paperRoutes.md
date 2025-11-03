@@ -34,25 +34,44 @@
 ## 获取论文列表
 - **URL**: `/api/papers`
 - **Method**: `GET`
-- **Description**: 获取论文列表（根据用户角色返回不同范围的论文）
+- **Description**: 获取论文列表，支持分页、过滤和排序功能（根据用户角色返回不同范围的论文）
 - **Authorization**: 需要 JWT 令牌
 - **Query Parameters**:
-  - `id` (number): 按论文ID精确搜索（优先，若有则不考虑其他）
-  - `progress` (string): 按论文进度过滤
+  - `id` (string): 按论文ID精确搜索（优先，若有则不考虑其他条件）
+  - `progress` (string): 按论文状态过滤，可选值：
+    - Draft(草稿), 
+    - Initial Reviewing(初审中), 
+    - Reviewing(评审中), 
+    - Revisioning(修改中), 
+    - Second Reviewing(二次评审), 
+    - Final Review Completed(最终评审完成), 
+    - Final Reviewing(最终评审中), 
+    - Paying(支付中), 
+    - Scheduling(排期中), 
+    - Published(已发表), 
+    - Accept(已录用), 
+    - Reject(已拒绝)
   - `status` (string): 论文状态筛选（仅编辑可用）
   - `status_read` (boolean): 论文状态已读标志筛选（仅编辑可用）
-  - `search` (string): 搜索关键词，会在标题（中、英文）和摘要（中、英文）中进行模糊搜索（当指定了id参数时，此参数将被忽略）
+  - `search` (string): 搜索关键词，会在标题（中、英文）和摘要（中、英文）中进行模糊搜索
   - `sortBy` (string): 排序字段，可选值：submission_date, title_zh, title_en, progress, status, status_read，默认值为 submission_date
   - `sortOrder` (string): 排序顺序，可选值：ASC, DESC，默认值为 DESC
+  - `page` (number): 页码，默认值为 1
+  - `pageSize` (number): 每页条数，默认值为 10
+  - `conclusion` (string): 专家角色特有，按审稿结论过滤
+  - `review_status` (string): 专家角色特有，按审稿状态过滤
+  - `review_start_date` (string): 专家角色特有，按审稿提交开始日期过滤
+  - `review_end_date` (string): 专家角色特有，按审稿提交结束日期过滤
   - `page` (number): 页码，默认为1
   - `pageSize` (number): 每页大小，默认为10
 - **Access Control**:
-  - 作者：只能查看自己参与的论文
-  - 编辑和专家：可以查看所有论文
+  - 作者：只能查看自己参与的论文（通过author_accessible_papers视图）
+  - 编辑：可以查看所有论文
+  - 专家：只能查看review_assignments表中与自己关联的论文
 - **Response**: 
 ```json
 {
-  "papers": [{
+  "items": [{
     "paper_id": "number", 
     "title_zh": "string", 
     "title_en": "string", 
@@ -63,17 +82,14 @@
     "integrity": "string",
     "check_time": "datetime",
     "submission_date": "datetime",
-    "status": "string",
-    "status_read": "boolean"
+    "conclusion": "string",  // 仅专家角色返回
+    "review_status": "string",  // 仅专家角色返回
+    "review_submission_date": "datetime"  // 仅专家角色返回
   }],
-  "pagination": {
-    "currentPage": "number",
-    "pageSize": "number",
-    "totalItems": "number",
-    "totalPages": "number",
-    "hasNextPage": "boolean",
-    "hasPreviousPage": "boolean"
-  }
+  "total": "number",
+  "page": "number",
+  "pageSize": "number",
+  "totalPages": "number"
 }
 ```
 
@@ -142,14 +158,24 @@
 - **URL**: `/api/papers/:id/integrity`
 - **Method**: `PUT`
 - **Description**: 编辑检查并更新论文的完整性状态
-- **Request Body**: `{"is_complete": "boolean"}`
+- **权限要求**: 仅编辑角色
+- **Authorization**: 需要 JWT 令牌
+- **Request Body**: 
+```json
+{
+  "integrity": "string" // 有效值: 'True', 'False', 'Waiting'
+}
+```
 - **Response**: 
 ```json
 {
-  "message": "string", 
-  "is_complete": "boolean"
+  "message": "论文完整性检查完成"
 }
 ```
+- **失败响应**:
+  - 400: `{"message": "无效的完整性状态，有效状态为：True, False, Waiting"}`
+  - 404: `{"message": "论文不存在"}`
+  - 500: `{"message": "错误信息"}`
 
 ## 上传论文附件
 - **URL**: `/api/papers/upload-attachment`
