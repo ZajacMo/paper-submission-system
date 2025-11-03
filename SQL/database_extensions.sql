@@ -354,3 +354,6 @@ BEGIN
   SET NEW.`withdrawal_date` = CURRENT_TIMESTAMP;
 END$$
 DELIMITER ;
+
+
+

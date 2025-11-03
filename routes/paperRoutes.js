@@ -104,7 +104,13 @@ router.get('/progress', authenticateToken, authorizeRole(['author']), async (req
 router.get('/', authenticateToken, async (req, res) => {
   try {
     let query, params = [];
-    const { progress, search, id, sortBy = 'submission_date', sortOrder = 'DESC' } = req.query;
+    const { progress, search, id, sortBy = 'submission_date', sortOrder = 'DESC', 
+            status, status_read, page = 1, pageSize = 10 } = req.query;
+    
+    // 验证分页参数
+    const pageNum = parseInt(page) || 1;
+    const limit = parseInt(pageSize) || 10;
+    const offset = (pageNum - 1) * limit;
     
     if (req.user.role === 'author') {
       // 使用作者可访问论文视图
@@ -114,10 +120,21 @@ router.get('/', authenticateToken, async (req, res) => {
       params = [req.user.id];
     } else {
       // 编辑和专家查看所有论文
-      query = 'SELECT * FROM papers';
+      query = 'SELECT * FROM papers WHERE 1=1'; // 使用 1=1 作为基础条件，方便添加其他条件
+      
+      // 添加编辑特有的过滤条件
+      if (status) {
+        query += ' AND status = ?';
+        params.push(status);
+      }
+      
+      if (status_read) {
+        query += ' AND status_read = ?';
+        params.push(status_read);
+      }
     }
     
-    // 添加过滤条件
+    // 添加通用过滤条件
     if (progress) {
       query += ' AND progress = ?';
       params.push(progress);
@@ -135,15 +152,115 @@ router.get('/', authenticateToken, async (req, res) => {
     }
     
     // 添加排序
-    const validSortColumns = ['submission_date', 'title_zh', 'title_en', 'progress'];
+    const validSortColumns = ['submission_date', 'title_zh', 'title_en', 'progress', 'status', 'status_read'];
     const validSortOrders = ['ASC', 'DESC'];
     const sortColumn = validSortColumns.includes(sortBy) ? sortBy : 'submission_date';
     const order = validSortOrders.includes(sortOrder.toUpperCase()) ? sortOrder.toUpperCase() : 'DESC';
     
     query += ` ORDER BY ${sortColumn} ${order}`;
     
+    // 添加分页
+    query += ' LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+    
+    // 执行查询获取论文列表
     const [papers] = await pool.execute(query, params);
-    res.json(papers);
+    
+    // 获取总记录数，用于分页信息
+    let countQuery, countParams;
+    if (req.user.role === 'author') {
+      countQuery = `SELECT COUNT(DISTINCT p.paper_id) AS total 
+                   FROM author_accessible_papers p 
+                   WHERE p.author_id = ?`;
+      countParams = [req.user.id];
+    } else {
+      countQuery = 'SELECT COUNT(*) AS total FROM papers WHERE 1=1';
+      countParams = [];
+      
+      // 添加编辑特有的过滤条件
+      if (status) {
+        countQuery += ' AND status = ?';
+        countParams.push(status);
+      }
+      
+      if (status_read) {
+        countQuery += ' AND status_read = ?';
+        countParams.push(status_read);
+      }
+    }
+    
+    // 添加通用过滤条件到总数查询
+    if (progress) {
+      countQuery += ' AND progress = ?';
+      countParams.push(progress);
+    }
+    
+    if (id) {
+      countQuery += ' AND paper_id = ?';
+      countParams.push(id);
+    }
+    
+    if (search && !id) {
+      countQuery += ` AND (title_zh LIKE ? OR title_en LIKE ? OR abstract_zh LIKE ? OR abstract_en LIKE ?)`;
+      const searchParam = `%${search}%`;
+      countParams.push(searchParam, searchParam, searchParam, searchParam);
+    }
+    
+    const [countResult] = await pool.execute(countQuery, countParams);
+    const total = countResult[0].total;
+    const totalPages = Math.ceil(total / limit);
+    
+    // 返回包含分页信息的数据
+    res.json({
+      papers,
+      pagination: {
+        currentPage: pageNum,
+        pageSize: limit,
+        totalItems: total,
+        totalPages: totalPages,
+        hasNextPage: pageNum < totalPages,
+        hasPreviousPage: pageNum > 1
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// 获取指定论文的状态信息
+router.get('/:id/status', authenticateToken, async (req, res) => {
+  try {
+    const paperId = req.params.id;
+    
+    // 检查用户是否有权限查看该论文的状态
+    if (req.user.role === 'author') {
+      const [authorCheck] = await pool.execute(
+        `SELECT COUNT(*) AS count 
+         FROM paper_authors_institutions 
+         WHERE paper_id = ? AND author_id = ?`,
+        [paperId, req.user.id]
+      );
+      
+      if (authorCheck[0].count === 0) {
+        return res.status(403).json({ message: '无权查看该论文的状态' });
+      }
+    }
+    
+    // 查询论文的状态信息
+    const [papers] = await pool.execute(
+      'SELECT status, status_read FROM papers WHERE paper_id = ?',
+      [paperId]
+    );
+    
+    if (papers.length === 0) {
+      return res.status(404).json({ message: '论文不存在' });
+    }
+    
+    res.json({
+      paper_id: paperId,
+      status: papers[0].status,
+      status_read: papers[0].status_read
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -39,26 +39,42 @@
 - **Query Parameters**:
   - `id` (number): 按论文ID精确搜索（优先，若有则不考虑其他）
   - `progress` (string): 按论文进度过滤
+  - `status` (string): 论文状态筛选（仅编辑可用）
+  - `status_read` (boolean): 论文状态已读标志筛选（仅编辑可用）
   - `search` (string): 搜索关键词，会在标题（中、英文）和摘要（中、英文）中进行模糊搜索（当指定了id参数时，此参数将被忽略）
-  - `sortBy` (string): 排序字段，可选值：submission_date, title_zh, title_en, progress，默认值为 submission_date
+  - `sortBy` (string): 排序字段，可选值：submission_date, title_zh, title_en, progress, status, status_read，默认值为 submission_date
   - `sortOrder` (string): 排序顺序，可选值：ASC, DESC，默认值为 DESC
+  - `page` (number): 页码，默认为1
+  - `pageSize` (number): 每页大小，默认为10
 - **Access Control**:
   - 作者：只能查看自己参与的论文
   - 编辑和专家：可以查看所有论文
 - **Response**: 
 ```json
-[{
-  "paper_id": "number", 
-  "title_zh": "string", 
-  "title_en": "string", 
-  "abstract_zh": "string", 
-  "abstract_en": "string", 
-  "attachment_path": "string",
-  "progress": "string",
-  "integrity": "string",
-  "check_time": "datetime",
-  "submission_date": "datetime"
-}]
+{
+  "papers": [{
+    "paper_id": "number", 
+    "title_zh": "string", 
+    "title_en": "string", 
+    "abstract_zh": "string", 
+    "abstract_en": "string", 
+    "attachment_path": "string",
+    "progress": "string",
+    "integrity": "string",
+    "check_time": "datetime",
+    "submission_date": "datetime",
+    "status": "string",
+    "status_read": "boolean"
+  }],
+  "pagination": {
+    "currentPage": "number",
+    "pageSize": "number",
+    "totalItems": "number",
+    "totalPages": "number",
+    "hasNextPage": "boolean",
+    "hasPreviousPage": "boolean"
+  }
+}
 ```
 
 ## 获取论文详情
@@ -86,7 +102,9 @@
   "totalKeywords": "number",
   "totalFunds": "number",
   "hasReviewComments": "boolean",
-  "reviewTimes": "number"
+  "reviewTimes": "number",
+  "status": "string",
+  "status_read": "boolean"
 }
 ```
 
@@ -246,6 +264,27 @@
 - **失败响应**:
   - 403: `{"message": "无权访问该论文的审稿进度"}`
   - 404: `{"message": "未找到该论文的审稿进度"}`
+  - 500: `{"message": "查询失败"}`
+
+## 获取论文状态信息
+- **URL**: `/api/papers/:id/status`
+- **Method**: `GET`
+- **Description**: 获取指定论文的状态信息，包括 status 和 status_read 字段
+- **权限要求**: 作者（只能查看自己参与的论文）、专家、编辑
+- **请求参数**:
+  - URL参数: `id` (论文ID)
+  - Header: `Authorization`: Bearer JWT令牌
+- **成功响应**:
+  ```json
+  {
+    "paper_id": "number",
+    "status": "string",
+    "status_read": "boolean"
+  }
+  ```
+- **失败响应**:
+  - 403: `{"message": "无权查看该论文的状态"}`
+  - 404: `{"message": "论文不存在"}`
   - 500: `{"message": "查询失败"}`
 
 ## 获取作者所有论文的审稿进度

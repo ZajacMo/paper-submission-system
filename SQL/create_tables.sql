@@ -101,6 +101,8 @@ CREATE TABLE `papers` (
   `progress` ENUM('Processing','Finished') NOT NULL DEFAULT 'Processing',
   `integrity` ENUM('True', 'False', 'Waiting') NOT NULL DEFAULT 'Waiting',
   `check_time` DATETIME NULL,
+  `status` ENUM('Accept', 'Reject', 'Major Review', 'Minor Review')',
+  `status_read` BOOLEAN NOT NULL DEFAULT FALSE,
   PRIMARY KEY (`paper_id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
 

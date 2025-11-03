@@ -103,12 +103,19 @@ router.put('/:id/read', authenticateToken, async (req, res) => {
       }
     }
     
+    // 标记通知为已读
     await pool.execute(
       `UPDATE notifications SET is_read = TRUE WHERE notification_id = ?`,
       [notificationId]
     );
     
-    res.json({ message: '通知已标记为已读' });
+    // 更新对应论文的 status_read 为 True
+    await pool.execute(
+      `UPDATE papers SET status_read = TRUE WHERE paper_id = ?`,
+      [notification.paper_id]
+    );
+    
+    res.json({ message: '通知已标记为已读，论文状态已更新为已读' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
