@@ -1,67 +1,232 @@
-# 通知模块
+# API说明 - 通知模块
 
-## 获取作者通知
-- **URL**: `/api/notifications/author`
-- **Method**: `GET`
-- **Description**: 作者获取自己参与论文的通知列表
-- **Response**: 
+本文档详细描述通知模块的所有API接口，包括请求参数、响应格式和权限要求等信息。
+
+## 接口列表
+
+### 1. 作者拉取自己的通知
+
+**URL**: `/api/notifications/author`  
+**Method**: `GET`  
+**Description**: 获取当前登录作者参与的所有论文的通知。  
+**Access**: 需要JWT认证，需要author角色权限。  
+
+**Success Response**:  
+- **Code**: 200  
+- **Content**:  
 ```json
-[{
-    "notification_id": "number", 
-    "paper_id": "number", 
-    "notification_type": "string", 
-    "sent_at": "datetime", 
-    "deadline": "datetime", 
-    "is_read": "boolean", 
-    "content": "string"
-}]
+[
+  {
+    "notification_id": 1,
+    "paper_id": 1,
+    "notification_type": "Acceptance Notification",
+    "sent_at": "2023-05-20T14:30:00Z",
+    "deadline": null,
+    "is_read": false
+  },
+  {
+    "notification_id": 2,
+    "paper_id": 1,
+    "notification_type": "Review Assignment",
+    "sent_at": "2023-05-15T10:00:00Z",
+    "deadline": null,
+    "is_read": true
+  }
+]
 ```
 
-## 发送通知给作者
-- **URL**: `/api/notifications/author`
-- **Method**: `POST`
-- **Description**: 编辑发送通知给论文相关作者
-- **Authorization**: 需要 JWT 令牌
-- **Access Control**: 仅编辑角色可访问
-- **Request Body**: 
+**Failed Response**:  
+- **Code**: 401  
+- **Content**: `{"message": "未授权访问"}`  
+- **Code**: 403  
+- **Content**: `{"message": "权限不足"}`  
+- **Code**: 500  
+- **Content**: `{"message": "服务器错误信息"}`
+
+### 2. 编辑发送通知给作者
+
+**URL**: `/api/notifications/author`  
+**Method**: `POST`  
+**Description**: 编辑向作者发送通知，包括接受通知、拒绝通知、审稿分配和付款确认。  
+**Access**: 需要JWT认证，需要editor角色权限。  
+
+**Request Body**:
 ```json
 {
-    "paper_id": "number", 
-    "notification_type": "Acceptance Notification/Rejection Notification/Review Assignment/Payment Confirmation", 
-    "deadline": "datetime" (可选，仅当notification_type为Revision Notification时必需)
+  "paper_id": 1,
+  "notification_type": "Acceptance Notification",
+  "deadline": null
 }
 ```
-- **Success Response**: 
-```json
-{
-    "message": "通知发送成功", 
-    "notification_id": "number"
-}
-```
-- **Error Response**:
-  - 400: `{"message": "无效的通知类型，有效类型为：Acceptance Notification, Rejection Notification, Review Assignment, Payment Confirmation"}`
-  - 400: `{"message": "修稿通知必须提供截止时间"}`
-  - 404: `{"message": "论文不存在"}`
-  - 500: `{"message": "错误信息"}`
 
-## 标记通知为已读
-- **URL**: `/api/notifications/:id/read`
-- **Method**: `PUT`
-- **Description**: 标记通知为已读（作者只能标记自己参与论文的通知）
-- **Response**: 
+**Success Response**:  
+- **Code**: 201  
+- **Content**:  
 ```json
 {
-    "message": "string"
+  "message": "通知发送成功",
+  "notification_id": 3
 }
 ```
 
-## 获取未读通知数量
-- **URL**: `/api/notifications/unread-count`
-- **Method**: `GET`
-- **Description**: 获取当前用户参与论文的未读通知数量
-- **Response**: 
+**Failed Response**:  
+- **Code**: 400  
+- **Content**: `{"message": "无效的通知类型，有效类型为：Acceptance Notification, Rejection Notification, Review Assignment, Payment Confirmation"}` 或 `{"message": "修稿通知必须提供截止时间"}`  
+- **Code**: 401  
+- **Content**: `{"message": "未授权访问"}`  
+- **Code**: 403  
+- **Content**: `{"message": "权限不足"}`  
+- **Code**: 404  
+- **Content**: `{"message": "论文不存在"}`  
+- **Code**: 500  
+- **Content**: `{"message": "服务器错误信息"}`
+
+### 3. 标记通知为已读
+
+**URL**: `/api/notifications/:id/read`  
+**Method**: `PUT`  
+**Description**: 将指定通知标记为已读，并更新对应论文的状态为已读。  
+**Access**: 需要JWT认证。  
+
+**URL Parameters**:
+- `id`: 通知ID。  
+
+**Success Response**:  
+- **Code**: 200  
+- **Content**:  
 ```json
 {
-    "unread_count": "number"
+  "message": "通知已标记为已读，论文状态已更新为已读"
+}
+```
+
+**Failed Response**:  
+- **Code**: 401  
+- **Content**: `{"message": "未授权访问"}`  
+- **Code**: 403  
+- **Content**: `{"message": "您无权操作此通知"}`  
+- **Code**: 404  
+- **Content**: `{"message": "通知不存在"}`  
+- **Code**: 500  
+- **Content**: `{"message": "服务器错误信息"}`
+
+### 4. 获取未读通知数量
+
+**URL**: `/api/notifications/unread-count`  
+**Method**: `GET`  
+**Description**: 获取当前登录作者参与的所有论文的未读通知数量。  
+**Access**: 需要JWT认证，需要author角色权限。  
+
+**Success Response**:  
+- **Code**: 200  
+- **Content**:  
+```json
+{
+  "unread_count": 2
+}
+```
+
+**Failed Response**:  
+- **Code**: 401  
+- **Content**: `{"message": "未授权访问"}`  
+- **Code**: 403  
+- **Content**: `{"message": "权限不足"}`  
+- **Code**: 500  
+- **Content**: `{"message": "服务器错误信息"}`
+
+## 使用示例
+
+### 作者获取通知示例
+
+**请求**:
+```http
+GET /api/notifications/author
+Authorization: Bearer your_jwt_token
+```
+
+**响应**:
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+[
+  {
+    "notification_id": 1,
+    "paper_id": 1,
+    "notification_type": "Acceptance Notification",
+    "sent_at": "2023-05-20T14:30:00Z",
+    "deadline": null,
+    "is_read": false
+  },
+  {
+    "notification_id": 2,
+    "paper_id": 1,
+    "notification_type": "Review Assignment",
+    "sent_at": "2023-05-15T10:00:00Z",
+    "deadline": null,
+    "is_read": true
+  }
+]
+```
+
+### 编辑发送通知示例
+
+**请求**:
+```http
+POST /api/notifications/author
+Authorization: Bearer your_jwt_token
+Content-Type: application/json
+
+{
+  "paper_id": 1,
+  "notification_type": "Acceptance Notification",
+  "deadline": null
+}
+```
+
+**响应**:
+```http
+HTTP/1.1 201 Created
+Content-Type: application/json
+
+{
+  "message": "通知发送成功",
+  "notification_id": 3
+}
+```
+
+### 标记通知为已读示例
+
+**请求**:
+```http
+PUT /api/notifications/1/read
+Authorization: Bearer your_jwt_token
+```
+
+**响应**:
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "message": "通知已标记为已读，论文状态已更新为已读"
+}
+```
+
+### 获取未读通知数量示例
+
+**请求**:
+```http
+GET /api/notifications/unread-count
+Authorization: Bearer your_jwt_token
+```
+
+**响应**:
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "unread_count": 2
 }
 ```

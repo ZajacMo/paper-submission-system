@@ -1,107 +1,163 @@
-# API说明-基金管理模块
+# API说明 - 基金模块
 
-## 接口概览
-本模块提供基金的新建、查询、论文关联等功能，仅对作者角色用户开放。
+本文档详细描述基金模块的所有API接口，包括请求参数、响应格式和权限要求等信息。
 
-## 新建基金
-- **URL**: `/api/funds`
-- **Method**: `POST`
-- **Description**: 作者用户创建新的基金项目
-- **Access**: 需要 author 角色权限
-- **Request Body**: 
+## 接口列表
+
+### 1. 新建基金
+
+**URL**: `/api/funds`  
+**Method**: `POST`  
+**Description**: 作者用户创建新的基金项目。  
+**Access**: 需要JWT认证，需要author角色权限。  
+
+**Request Body**:
 ```json
 {
-  "project_name": "string", // 基金项目名称
-  "project_number": "string" // 基金项目编号
+  "project_name": "国家自然科学基金项目",
+  "project_number": "61232010"
 }
 ```
-- **Success Response**: 
+
+**Success Response**:  
+- **Code**: 201  
+- **Content**:  
 ```json
 {
   "message": "基金创建成功",
-  "fund_id": "number",
-  "project_name": "string",
-  "project_number": "string"
+  "fund_id": 1,
+  "project_name": "国家自然科学基金项目",
+  "project_number": "61232010"
 }
 ```
-- **Error Response**: 
-  - `{"message": "项目名称和项目编号不能为空"}` (400)
-  - `{"message": "该基金项目编号已存在"}` (409)
-  - `{"message": "服务器错误，创建基金失败"}` (500)
 
-## 查询作者的所有基金
-- **URL**: `/api/funds`
-- **Method**: `GET`
-- **Description**: 作者用户查询自己创建或关联的所有基金
-- **Access**: 需要 author 角色权限
-- **Success Response**: 
+**Failed Response**:  
+- **Code**: 400  
+- **Content**: `{"message": "项目名称和项目编号不能为空"}`  
+- **Code**: 401  
+- **Content**: `{"message": "未授权访问"}`  
+- **Code**: 403  
+- **Content**: `{"message": "权限不足"}`  
+- **Code**: 409  
+- **Content**: `{"message": "该基金项目编号已存在"}`  
+- **Code**: 500  
+- **Content**: `{"message": "服务器错误，创建基金失败"}`
+
+### 2. 查询作者的所有基金
+
+**URL**: `/api/funds`  
+**Method**: `GET`  
+**Description**: 查询作者用户自己创建或关联的所有基金。  
+**Access**: 需要JWT认证，需要author角色权限。  
+
+**Success Response**:  
+- **Code**: 200  
+- **Content**:  
 ```json
 [
   {
-    "fund_id": "number",
-    "project_name": "string",
-    "project_number": "string"
+    "fund_id": 1,
+    "project_name": "国家自然科学基金项目",
+    "project_number": "61232010"
   },
-  ...
+  {
+    "fund_id": 2,
+    "project_name": "教育部博士点基金",
+    "project_number": "20130001110045"
+  }
 ]
 ```
-- **Error Response**: 
-  - `{"message": "服务器错误，查询基金失败"}` (500)
 
-## 根据ID查询基金详情
-- **URL**: `/api/funds/:fundId`
-- **Method**: `GET`
-- **Description**: 作者用户查询特定基金的详细信息
-- **Access**: 需要 author 角色权限
-- **URL Parameters**: 
-  - `fundId`: 基金ID (number)
-- **Success Response**: 
+**Failed Response**:  
+- **Code**: 401  
+- **Content**: `{"message": "未授权访问"}`  
+- **Code**: 403  
+- **Content**: `{"message": "权限不足"}`  
+- **Code**: 500  
+- **Content**: `{"message": "服务器错误，查询基金失败"}`
+
+### 3. 搜索基金
+
+**URL**: `/api/funds/search`  
+**Method**: `GET`  
+**Description**: 根据项目名称或编号搜索基金。  
+**Access**: 需要JWT认证，需要author角色权限。  
+
+**URL Parameters**:
+- `query`: 搜索关键词，必填。可以是项目名称或项目编号的部分内容。  
+
+**Success Response**:  
+- **Code**: 200  
+- **Content**:  
+```json
+[
+  {
+    "fund_id": 1,
+    "project_name": "国家自然科学基金项目",
+    "project_number": "61232010"
+  },
+  {
+    "fund_id": 3,
+    "project_name": "国家重点研发计划",
+    "project_number": "2017YFB1002900"
+  }
+]
+```
+
+**Failed Response**:  
+- **Code**: 400  
+- **Content**: `{"message": "搜索关键词不能为空"}`  
+- **Code**: 401  
+- **Content**: `{"message": "未授权访问"}`  
+- **Code**: 403  
+- **Content**: `{"message": "权限不足"}`  
+- **Code**: 500  
+- **Content**: `{"message": "服务器错误，搜索基金失败"}`
+
+### 4. 根据ID查询基金详情
+
+**URL**: `/api/funds/:fundId`  
+**Method**: `GET`  
+**Description**: 查询特定基金的详细信息，并验证用户是否有权限访问。  
+**Access**: 需要JWT认证，需要author角色权限。  
+
+**URL Parameters**:
+- `fundId`: 基金ID，必填。  
+
+**Success Response**:  
+- **Code**: 200  
+- **Content**:  
 ```json
 {
-  "fund_id": "number",
-  "project_name": "string",
-  "project_number": "string"
+  "fund_id": 1,
+  "project_name": "国家自然科学基金项目",
+  "project_number": "61232010"
 }
 ```
-- **Error Response**: 
-  - `{"message": "基金不存在或您无权访问"}` (404)
-  - `{"message": "服务器错误，查询基金详情失败"}` (500)
 
-
-## 搜索基金
-- **URL**: `/api/funds/search`
-- **Method**: `GET`
-- **Description**: 作者用户根据项目名称或编号搜索基金
-- **Access**: 需要 author 角色权限
-- **Query Parameters**: 
-  - `query`: 搜索关键词 (string)
-- **Success Response**: 
-```json
-[
-  {
-    "fund_id": "number",
-    "project_name": "string",
-    "project_number": "string"
-  },
-  ...
-]
-```
-- **Error Response**: 
-  - `{"message": "搜索关键词不能为空"}` (400)
-  - `{"message": "服务器错误，搜索基金失败"}` (500)
+**Failed Response**:  
+- **Code**: 401  
+- **Content**: `{"message": "未授权访问"}`  
+- **Code**: 403  
+- **Content**: `{"message": "权限不足"}`  
+- **Code**: 404  
+- **Content**: `{"message": "基金不存在或您无权访问"}`  
+- **Code**: 500  
+- **Content**: `{"message": "服务器错误，查询基金详情失败"}`
 
 ## 使用示例
 
 ### 创建新基金示例
+
 **请求**:
 ```http
-POST /api/funds HTTP/1.1
+POST /api/funds
+Authorization: Bearer your_jwt_token
 Content-Type: application/json
-Authorization: Bearer [your_token]
 
 {
   "project_name": "国家自然科学基金项目",
-  "project_number": "NSFC-1234567"
+  "project_number": "61232010"
 }
 ```
 
@@ -114,35 +170,16 @@ Content-Type: application/json
   "message": "基金创建成功",
   "fund_id": 1,
   "project_name": "国家自然科学基金项目",
-  "project_number": "NSFC-1234567"
+  "project_number": "61232010"
 }
 ```
 
-### 关联论文与基金示例
+### 查询所有基金示例
+
 **请求**:
 ```http
-POST /api/funds/1/associate/5 HTTP/1.1
-Content-Type: application/json
-Authorization: Bearer [your_token]
-```
-
-**响应**:
-```http
-HTTP/1.1 200 OK
-Content-Type: application/json
-
-{
-  "message": "基金与论文关联成功",
-  "paper_id": "5",
-  "fund_id": "1"
-}
-```
-
-### 搜索基金示例
-**请求**:
-```http
-GET /api/funds/search?query=国家自然科学 HTTP/1.1
-Authorization: Bearer [your_token]
+GET /api/funds
+Authorization: Bearer your_jwt_token
 ```
 
 **响应**:
@@ -154,12 +191,54 @@ Content-Type: application/json
   {
     "fund_id": 1,
     "project_name": "国家自然科学基金项目",
-    "project_number": "NSFC-1234567"
+    "project_number": "61232010"
   },
   {
-    "fund_id": 3,
-    "project_name": "国家自然科学基金重点项目",
-    "project_number": "NSFC-K987654"
+    "fund_id": 2,
+    "project_name": "教育部博士点基金",
+    "project_number": "20130001110045"
   }
 ]
+```
+
+### 搜索基金示例
+
+**请求**:
+```http
+GET /api/funds/search?query=国家自然科学
+Authorization: Bearer your_jwt_token
+```
+
+**响应**:
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+[
+  {
+    "fund_id": 1,
+    "project_name": "国家自然科学基金项目",
+    "project_number": "61232010"
+  }
+]
+```
+
+### 查询基金详情示例
+
+**请求**:
+```http
+GET /api/funds/1
+Authorization: Bearer your_jwt_token
+```
+
+**响应**:
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "fund_id": 1,
+  "project_name": "国家自然科学基金项目",
+  "project_number": "61232010"
+}
 ```
