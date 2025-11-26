@@ -53,6 +53,7 @@
 [ER图](./docs/ER图1009.pptx)
 
 ## 后端API
+API文档集合[API目录](./docs/README.md)
 
 ### 技术栈
 - Node.js + Express.js

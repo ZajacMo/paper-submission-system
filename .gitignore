@@ -57,6 +57,7 @@ sqlite3.db
 *.sqlite
 论文管理数据/
 uploads
+SQL/Script.sql
 
 # Package manager lock files (optional, depending on team preference)
 # package-lock.json

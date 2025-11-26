@@ -66,6 +66,12 @@ router.post('/author', authenticateToken, authorizeRole(['editor']), async (req,
       [paper_id, notification_type, deadline]
     );
     
+    // 将对应论文的status_read设置为True
+    await pool.execute(
+      `UPDATE papers SET status_read = TRUE WHERE paper_id = ?`,
+      [paper_id]
+    );
+    
     res.status(201).json({
       message: '通知发送成功', 
       notification_id: result.insertId

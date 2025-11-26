@@ -1,287 +1,278 @@
 -- 创建作者表 (authors)
-CREATE TABLE `authors` (
-  `author_id` INT NOT NULL AUTO_INCREMENT,
-  `name` VARCHAR(100) NOT NULL,
-  `age` TINYINT UNSIGNED NULL,
-  `email` VARCHAR(100) NOT NULL,
-  `password` VARCHAR(255) NOT NULL,
-  `degree` VARCHAR(50) NULL,
-  `title` VARCHAR(50) NULL,
-  `hometown` VARCHAR(100) NULL,
-  `research_areas` TEXT NULL,
-  `bio` TEXT NULL,
-  `phone` VARCHAR(20) NULL,
-  PRIMARY KEY (`author_id`),
-  UNIQUE INDEX `email_UNIQUE` (`email` ASC)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+create table paper_submission_system.authors
+(
+    author_id      int auto_increment primary key,
+    name           varchar(100)     not null,
+    age            tinyint unsigned null,
+    email          varchar(100)     not null,
+    password       varchar(255)     not null,
+    degree         varchar(50)      null,
+    title          varchar(50)      null,
+    hometown       varchar(100)     null,
+    research_areas text             null,
+    bio            text             null,
+    phone          varchar(20)      null,
+    constraint email_UNIQUE
+        unique (email)
+);
+
 
 -- 创建单位表 (institutions)
-CREATE TABLE `institutions` (
-  `institution_id` INT NOT NULL AUTO_INCREMENT,
-  `name` VARCHAR(200) NOT NULL,
-  `city` VARCHAR(100) NOT NULL,
-  `zip_code` VARCHAR(20) NULL,
-  PRIMARY KEY (`institution_id`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+create table paper_submission_system.institutions
+(
+    institution_id int auto_increment primary key,
+    name           varchar(200) not null,
+    city           varchar(100) not null,
+    zip_code       varchar(20)  null
+);
+
+
 
 -- 创建作者-单位关联表 (author_institutions)
-CREATE TABLE `author_institutions` (
-  `author_id` INT NOT NULL,
-  `institution_id` INT NOT NULL,
-  PRIMARY KEY (`author_id`, `institution_id`),
-  INDEX `fk_author_institutions_institutions_idx` (`institution_id` ASC),
-  CONSTRAINT `fk_author_institutions_authors`
-    FOREIGN KEY (`author_id`)
-    REFERENCES `authors` (`author_id`)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE,
-  CONSTRAINT `fk_author_institutions_institutions`
-    FOREIGN KEY (`institution_id`)
-    REFERENCES `institutions` (`institution_id`)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+create table paper_submission_system.author_institutions
+(
+    author_id      int not null,
+    institution_id int not null,
+    primary key (author_id, institution_id),
+    constraint fk_author_institutions_authors
+        foreign key (author_id) references paper_submission_system.authors (author_id)
+            on update cascade on delete cascade,
+    constraint fk_author_institutions_institutions
+        foreign key (institution_id) references paper_submission_system.institutions (institution_id)
+            on update cascade on delete cascade
+);
+
+
 
 -- 创建专家表 (experts)
-CREATE TABLE `experts` (
-  `expert_id` INT NOT NULL AUTO_INCREMENT,
-  `password` VARCHAR(255) NOT NULL,
-  `name` VARCHAR(100) NOT NULL,
-  `title` VARCHAR(50) NULL,
-  `email` VARCHAR(100) NOT NULL,
-  `phone` VARCHAR(20) NULL,
-  `research_areas` TEXT NULL,
-  `bank_account` VARCHAR(50) NULL,
-  `bank_name` VARCHAR(100) NULL,
-  `account_holder` VARCHAR(100) NULL,
-  `review_fee` DECIMAL(10, 2) NOT NULL,
-  PRIMARY KEY (`expert_id`),
-  UNIQUE INDEX `email_UNIQUE` (`email` ASC)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+create table paper_submission_system.experts
+(
+    expert_id      int auto_increment
+        primary key,
+    name           varchar(100)   not null,
+    title          varchar(50)    null,
+    email          varchar(100)   not null,
+    phone          varchar(20)    null,
+    research_areas text           null,
+    bank_account   varchar(50)    null,
+    bank_name      varchar(100)   null,
+    account_holder varchar(100)   null,
+    review_fee     decimal(10, 2) not null,
+    password       varchar(255)   not null,
+    constraint email_UNIQUE
+        unique (email)
+);
 
 -- 创建专家就职表 (expert_institutions)
-CREATE TABLE `expert_institutions` (
-  `expert_id` INT NOT NULL,
-  `institution_id` INT NOT NULL,
-  PRIMARY KEY (`expert_id`, `institution_id`),
-  INDEX `fk_expert_institutions_institutions_idx` (`institution_id` ASC),
-  CONSTRAINT `fk_expert_institutions_experts`
-    FOREIGN KEY (`expert_id`)
-    REFERENCES `experts` (`expert_id`)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE,
-  CONSTRAINT `fk_expert_institutions_institutions`
-    FOREIGN KEY (`institution_id`)
-    REFERENCES `institutions` (`institution_id`)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+create table paper_submission_system.expert_institutions
+(
+    expert_id      int not null,
+    institution_id int not null,
+    primary key (expert_id, institution_id),
+    constraint fk_expert_institutions_experts
+        foreign key (expert_id) references paper_submission_system.experts (expert_id)
+            on update cascade on delete cascade,
+    constraint fk_expert_institutions_institutions
+        foreign key (institution_id) references paper_submission_system.institutions (institution_id)
+            on update cascade on delete cascade
+);
+
 
 -- 创建编辑表 (editors)
-CREATE TABLE `editors` (
-  `editor_id` INT NOT NULL AUTO_INCREMENT,
-  `name` VARCHAR(100) NOT NULL,
-  `email` VARCHAR(100) NOT NULL,
-  `password` VARCHAR(255) NOT NULL,
-  PRIMARY KEY (`editor_id`),
-  UNIQUE INDEX `email_UNIQUE` (`email` ASC)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
-
+create table paper_submission_system.editors
+(
+    editor_id int auto_increment
+        primary key,
+    name      varchar(100) not null,
+    email     varchar(100) not null,
+    password  varchar(255) not null,
+    constraint email_UNIQUE
+        unique (email)
+);
 
 -- 创建论文表 (papers)
-CREATE TABLE `papers` (
-  `paper_id` INT NOT NULL AUTO_INCREMENT,
-  `title_zh` VARCHAR(500) NOT NULL,
-  `title_en` VARCHAR(500) NOT NULL,
-  `abstract_zh` TEXT NOT NULL,
-  `abstract_en` TEXT NOT NULL,
-  `attachment_path` VARCHAR(500) NOT NULL,
-  `submission_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `update_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `progress` ENUM('Processing','Finished') NOT NULL DEFAULT 'Processing',
-  `integrity` ENUM('True', 'False', 'Waiting') NOT NULL DEFAULT 'Waiting',
-  `check_time` DATETIME NULL,
-  `status` ENUM('Accept', 'Reject', 'Major Review', 'Minor Review')',
-  `status_read` BOOLEAN NOT NULL DEFAULT FALSE,
-  PRIMARY KEY (`paper_id`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+create table paper_submission_system.papers
+(
+    paper_id        int auto_increment
+        primary key,
+    title_zh        varchar(500)                                                  not null,
+    title_en        varchar(500)                                                  not null,
+    abstract_zh     text                                                          not null,
+    abstract_en     text                                                          not null,
+    attachment_path varchar(500)                                                  not null,
+    submission_date datetime                          default CURRENT_TIMESTAMP   not null,
+    integrity       enum ('True', 'False', 'Waiting') default 'Waiting'           not null,
+    check_time      datetime                                                      null,
+    update_date     datetime                          default CURRENT_TIMESTAMP   not null on update CURRENT_TIMESTAMP,
+    status          enum ('Accept', 'Reject', 'Minor Revision', 'Major Revision') null,
+    status_read     tinyint(1)                        default 0                   not null
+);
+
 
 -- 创建关键词表 (keywords)
-CREATE TABLE `keywords` (
-  `keyword_id` INT NOT NULL AUTO_INCREMENT,
-  `keyword_name` VARCHAR(20) NOT NULL,
-  `keyword_type` ENUM('zh', 'en') NOT NULL,
-  PRIMARY KEY (`keyword_id`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+create table paper_submission_system.keywords
+(
+    keyword_id   int auto_increment primary key,
+    keyword_name varchar(20)       not null,
+    keyword_type enum ('zh', 'en') not null
+);
 
--- ========================
+
 
 -- 创建论文-关键词关联表 (paper_keywords)=======
-CREATE TABLE `paper_keywords` (
-  `paper_id` INT NOT NULL,
-  `keyword_id` INT NOT NULL,
-  PRIMARY KEY (`paper_id`, `keyword_id`),
-  INDEX `fk_paper_keywords_keywords_idx` (`keyword_id` ASC),
-  CONSTRAINT `fk_paper_keywords_papers`
-    FOREIGN KEY (`paper_id`)
-    REFERENCES `papers` (`paper_id`)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE,
-  CONSTRAINT `fk_paper_keywords_keywords`
-    FOREIGN KEY (`keyword_id`)
-    REFERENCES `keywords` (`keyword_id`)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+create table paper_submission_system.paper_keywords
+(
+    paper_id   int not null,
+    keyword_id int not null,
+    primary key (paper_id, keyword_id),
+    constraint fk_paper_keywords_keywords
+        foreign key (keyword_id) references paper_submission_system.keywords (keyword_id)
+            on update cascade on delete cascade,
+    constraint fk_paper_keywords_papers
+        foreign key (paper_id) references paper_submission_system.papers (paper_id)
+            on update cascade on delete cascade
+);
+
 
 -- 创建论文-作者-单位关联表 (paper_authors_institutions)========
-CREATE TABLE `paper_authors_institutions` (
-  `paper_id` INT NOT NULL,
-  `author_id` INT NOT NULL,
-  `institution_id` INT NOT NULL,
-  `is_corresponding` BOOLEAN NOT NULL DEFAULT FALSE,
-  PRIMARY KEY (`paper_id`, `author_id`, `institution_id`),
-  INDEX `fk_paper_authors_institutions_authors_idx` (`author_id` ASC),
-  INDEX `fk_paper_authors_institutions_institutions_idx` (`institution_id` ASC),
-  CONSTRAINT `fk_paper_authors_institutions_papers`
-    FOREIGN KEY (`paper_id`)
-    REFERENCES `papers` (`paper_id`)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE,
-  CONSTRAINT `fk_paper_authors_institutions_authors`
-    FOREIGN KEY (`author_id`)
-    REFERENCES `authors` (`author_id`)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE,
-  CONSTRAINT `fk_paper_authors_institutions_institutions`
-    FOREIGN KEY (`institution_id`)
-    REFERENCES `institutions` (`institution_id`)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+create table paper_submission_system.paper_authors_institutions
+(
+    paper_id         int                  not null,
+    author_id        int                  not null,
+    institution_id   int                  not null,
+    is_corresponding tinyint(1) default 0 not null,
+    primary key (paper_id, author_id, institution_id),
+    constraint fk_paper_authors_institutions_authors
+        foreign key (author_id) references paper_submission_system.authors (author_id)
+            on update cascade on delete cascade,
+    constraint fk_paper_authors_institutions_institutions
+        foreign key (institution_id) references paper_submission_system.institutions (institution_id)
+            on update cascade on delete cascade,
+    constraint fk_paper_authors_institutions_papers
+        foreign key (paper_id) references paper_submission_system.papers (paper_id)
+            on update cascade on delete cascade
+);
+
 
 -- 创建基金表 (funds)
-CREATE TABLE `funds` (
-  `fund_id` INT NOT NULL AUTO_INCREMENT,
-  `project_name` VARCHAR(200) NOT NULL,
-  `project_number` VARCHAR(100) NOT NULL,
-  PRIMARY KEY (`fund_id`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+create table paper_submission_system.funds
+(
+    fund_id        int auto_increment
+        primary key,
+    project_name   varchar(200) not null,
+    project_number varchar(100) not null
+);
+
 
 -- 创建论文-基金关联表 (paper_funds)
-CREATE TABLE `paper_funds` (
-  `paper_id` INT NOT NULL,
-  `fund_id` INT NOT NULL,
-  PRIMARY KEY (`paper_id`, `fund_id`),
-  INDEX `fk_paper_funds_funds_idx` (`fund_id` ASC),
-  CONSTRAINT `fk_paper_funds_papers`
-    FOREIGN KEY (`paper_id`)
-    REFERENCES `papers` (`paper_id`)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE,
-  CONSTRAINT `fk_paper_funds_funds`
-    FOREIGN KEY (`fund_id`)
-    REFERENCES `funds` (`fund_id`)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+create table paper_submission_system.paper_funds
+(
+    paper_id int not null,
+    fund_id  int not null,
+    primary key (paper_id, fund_id),
+    constraint fk_paper_funds_funds
+        foreign key (fund_id) references paper_submission_system.funds (fund_id)
+            on update cascade on delete cascade,
+    constraint fk_paper_funds_papers
+        foreign key (paper_id) references paper_submission_system.papers (paper_id)
+            on update cascade on delete cascade
+);
+
+
 
 -- 创建审稿分配表 (review_assignments)
-CREATE TABLE `review_assignments` (
-  `assignment_id` INT NOT NULL AUTO_INCREMENT,
-  `paper_id` INT NOT NULL,
-  `expert_id` INT NOT NULL,
-  `editor_id` INT NOT NULL,
-  `conclusion` ENUM('Accept', 'Minor Revision', 'Major Revision', 'Not Reviewed', 'Reject') NOT NULL,
-  `positive_comments` TEXT NULL,
-  `negative_comments` TEXT NULL,
-  `modification_advice` TEXT NULL,
-  `status` ENUM('Assigned', 'Completed', 'Overdue') NOT NULL DEFAULT 'Assigned',
-  `assigned_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `assigned_due_date` DATETIME NOT NULL,
-  `submission_date` DATETIME DEFAULT CURRENT_TIMESTAMP,
-  `is_read` BOOLEAN NOT NULL DEFAULT FALSE,
-  PRIMARY KEY (`assignment_id`),
-  INDEX `fk_review_assignments_experts_idx` (`expert_id` ASC),
-  INDEX `fk_review_assignments_editors_idx` (`editor_id` ASC),
-  CONSTRAINT `fk_review_assignments_papers`
-    FOREIGN KEY (`paper_id`)
-    REFERENCES `papers` (`paper_id`)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE,
-  CONSTRAINT `fk_review_assignments_experts`
-    FOREIGN KEY (`expert_id`)
-    REFERENCES `experts` (`expert_id`)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE,
-  CONSTRAINT `fk_review_assignments_editors`
-    FOREIGN KEY (`editor_id`)
-    REFERENCES `editors` (`editor_id`)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+create table paper_submission_system.review_assignments
+(
+    assignment_id       int auto_increment
+        primary key,
+    paper_id            int                                                                           not null,
+    expert_id           int                                                                           not null,
+    editor_id           int                                                                           not null,
+    conclusion          enum ('Accept', 'Minor Revision', 'Major Revision', 'Not Reviewed', 'Reject') not null,
+    positive_comments   text                                                                          null,
+    negative_comments   text                                                                          null,
+    modification_advice text                                                                          null,
+    submission_date     datetime                                                                      null on update CURRENT_TIMESTAMP,
+    status              enum ('Assigned', 'Completed', 'Overdue')                                     not null,
+    assigned_due_date   datetime                                                                      not null,
+    assigned_date       datetime   default (now())                                                    not null,
+    is_read             tinyint(1) default 0                                                          null,
+    constraint fk_review_assignments_editors
+        foreign key (editor_id) references paper_submission_system.editors (editor_id)
+            on update cascade on delete cascade,
+    constraint fk_review_assignments_experts
+        foreign key (expert_id) references paper_submission_system.experts (expert_id)
+            on update cascade on delete cascade,
+    constraint fk_review_assignments_papers
+        foreign key (paper_id) references paper_submission_system.papers (paper_id)
+            on update cascade on delete cascade
+);
+
 
 -- 创建支付表 (payments)
-CREATE TABLE `payments` (
-  `paper_id` INT NOT NULL,
-  `amount` DECIMAL(10, 2) NOT NULL,
-  `status` ENUM('Pending', 'Paid') NOT NULL DEFAULT 'Pending',
-  `payment_date` DATETIME NULL,
-  UNIQUE INDEX `paper_id_UNIQUE` (`paper_id` ASC),
-  CONSTRAINT `fk_payments_papers`
-    FOREIGN KEY (`paper_id`)
-    REFERENCES `papers` (`paper_id`)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+create table paper_submission_system.payments
+(
+    paper_id     int                                        not null,
+    amount       decimal(10, 2)                             not null,
+    status       enum ('Pending', 'Paid') default 'Pending' not null,
+    payment_date datetime                                   null on update CURRENT_TIMESTAMP,
+    constraint paper_id_UNIQUE
+        unique (paper_id),
+    constraint fk_payments_papers
+        foreign key (paper_id) references paper_submission_system.papers (paper_id)
+            on update cascade on delete cascade
+);
+
 
 -- 创建专家提现表 (withdrawals)
-CREATE TABLE `withdrawals` (
-  `assignment_id` INT NOT NULL,
-  `status` BOOLEAN NOT NULL DEFAULT FALSE,
-  `expert_id` INT NOT NULL,
-  `withdrawal_date` DATETIME DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT `fk_withdrawals_experts`
-    FOREIGN KEY (`expert_id`)
-    REFERENCES `experts` (`expert_id`)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE,
-  CONSTRAINT `fk_withdrawals_assignments`
-    FOREIGN KEY (`assignment_id`)
-    REFERENCES `review_assignments` (`assignment_id`)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+create table paper_submission_system.withdrawals
+(
+    assignment_id   int                                  not null,
+    status          tinyint(1) default 0                 not null,
+    expert_id       int                                  not null,
+    withdrawal_date datetime   default CURRENT_TIMESTAMP null,
+    constraint fk_withdrawals_assignments
+        foreign key (assignment_id) references paper_submission_system.review_assignments (assignment_id)
+            on update cascade on delete cascade,
+    constraint fk_withdrawals_experts
+        foreign key (expert_id) references paper_submission_system.experts (expert_id)
+            on update cascade on delete cascade
+);
+
+
 
 -- 创建排期表 (schedules)
-CREATE TABLE `schedules` (
-  `schedule_id` INT NOT NULL AUTO_INCREMENT,
-  `paper_id` INT NOT NULL,
-  `issue_number` VARCHAR(20) NOT NULL,
-  `volume_number` VARCHAR(20) NOT NULL,
-  `page_number` VARCHAR(50) NOT NULL,
-  PRIMARY KEY (`schedule_id`),
-  UNIQUE INDEX `paper_id_UNIQUE` (`paper_id` ASC),
-  CONSTRAINT `fk_schedules_papers`
-    FOREIGN KEY (`paper_id`)
-    REFERENCES `papers` (`paper_id`)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+create table paper_submission_system.schedules
+(
+    schedule_id   int auto_increment
+        primary key,
+    paper_id      int         not null,
+    issue_number  varchar(20) not null,
+    volume_number varchar(20) not null,
+    page_number   varchar(50) not null,
+    constraint paper_id_UNIQUE
+        unique (paper_id),
+    constraint fk_schedules_papers
+        foreign key (paper_id) references paper_submission_system.papers (paper_id)
+            on update cascade on delete cascade
+);
+
+
 
 -- 创建通知表 (notifications)
-CREATE TABLE `notifications` (
-  `notification_id` INT NOT NULL AUTO_INCREMENT,
-  `paper_id` INT NOT NULL,
-  `notification_type` ENUM('Review Assignment', 'Payment Confirmation', 'Acceptance Notification', 'Rejection Notification') NOT NULL,
-  `sent_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `deadline` DATETIME,
-  `is_read` BOOLEAN NOT NULL DEFAULT FALSE,
-  PRIMARY KEY (`notification_id`),
-  CONSTRAINT `fk_notifications_papers`
-    FOREIGN KEY (`paper_id`)
-    REFERENCES `papers` (`paper_id`)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+create table paper_submission_system.notifications
+(
+    notification_id   int auto_increment
+        primary key,
+    paper_id          int                                                                                                     not null,
+    notification_type enum ('Review Assignment', 'Payment Confirmation', 'Acceptance Notification', 'Rejection Notification') not null,
+    sent_at           datetime   default CURRENT_TIMESTAMP                                                                    not null,
+    deadline          datetime                                                                                                null,
+    is_read           tinyint(1) default 0                                                                                    not null,
+    constraint fk_notifications_papers
+        foreign key (paper_id) references paper_submission_system.papers (paper_id)
+            on update cascade on delete cascade
+);
+
+
 
