@@ -1,4 +1,5 @@
 # 论文投稿系统 (Paper Submission System)
+[English](README.md)
 
 这是一个全栈论文投稿与管理系统，由 React 前端和 Node.js/Express 后端组成。
 
