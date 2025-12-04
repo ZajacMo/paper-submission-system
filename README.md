@@ -1,5 +1,5 @@
 # Paper Submission System
-[中文](README-CN.md)
+[中文](README_CN.md)
 
 A full-stack paper submission and management system consisting of a React frontend and a Node.js/Express backend.
 
