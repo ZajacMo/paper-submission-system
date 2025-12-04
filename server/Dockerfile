@@ -1,5 +1,5 @@
 # Dockerfile for paper-submission-system
-FROM node:18
+FROM node:20
 
 # Use production node environment by default.
 ENV NODE_ENV production
