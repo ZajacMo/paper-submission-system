@@ -222,7 +222,7 @@
 
 **Failed Response**:  
 - **Code**: 400  
-- **Content**: `{"message": "标题、摘要和附件路径不能为空"}` 或 `{"message": "附件路径格式不正确，必须以uploads/开头"}` 或 `{"message": "附件文件不存在"}`  
+- **Content**: `{"message": "标题、摘要和附件路径不能为空"}` 或 `{"message": "附件路径格式不正确}` 或 `{"message": "附件文件不存在"}`  
 - **Code**: 401  
 - **Content**: `{"message": "未授权访问"}`  
 - **Code**: 403  
@@ -270,7 +270,7 @@
 
 **Failed Response**:  
 - **Code**: 400  
-- **Content**: `{"message": "附件路径格式不正确，必须以uploads/开头"}` 或 `{"message": "附件文件不存在"}`  
+- **Content**: `{"message": "附件路径格式不正确}` 或 `{"message": "附件文件不存在"}`  
 - **Code**: 401  
 - **Content**: `{"message": "未授权访问"}`  
 - **Code**: 403  

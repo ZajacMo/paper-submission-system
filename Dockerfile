@@ -17,7 +17,7 @@ RUN --mount=type=bind,source=package.json,target=package.json \
     npm ci --omit=dev
 
 # Create uploads directory and set permissions before switching to non-root user
-RUN mkdir -p /usr/src/app/uploads && chown -R node:node /usr/src/app
+RUN chown -R node:node /usr/src/app
 
 # Run the application as a non-root user.
 USER node

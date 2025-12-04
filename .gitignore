@@ -47,6 +47,7 @@ pids
 *.tmp
 *.temp
 .cache
+**/.env
 
 # OS generated files
 Thumbs.db
@@ -58,9 +59,11 @@ sqlite3.db
 论文管理数据/
 uploads
 SQL/Script.sql
+data.sql
 
 # Package manager lock files (optional, depending on team preference)
 # package-lock.json
 # yarn.lock
 # pnpm-lock.yaml
 *~*
+**data**

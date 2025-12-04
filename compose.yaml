@@ -27,7 +27,7 @@ services:
       - "host.docker.internal:host-gateway"
     # 挂载volume用于文件上传
     volumes:
-      - paper-submitted:/usr/src/app/uploads
+      - submitted-papers:/var/lib/submitted_papers
   
 #   db:
 #     image: mysql:9.4
@@ -48,12 +48,7 @@ services:
 
 # 定义volume
 volumes:
-  paper-submitted:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /mnt/host/f/Documents/Projects/SQLProject/paper-submission-system-sql/uploads
+  submitted-papers:
   
 
 # The commented out section below is an example of how to define a PostgreSQL

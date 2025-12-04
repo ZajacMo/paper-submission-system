@@ -7,7 +7,7 @@ const path = require('path');
 const fs = require('fs');
 
 // 确保uploads目录存在
-const uploadsDir = path.join(__dirname, '../uploads');
+const uploadsDir = '/var/lib/submitted_papers';
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -435,7 +435,8 @@ router.get('/:id/download', authenticateToken, async (req, res) => {
     }
     
     // 构建文件的完整路径
-    const filePath = path.join(__dirname, '..', paper.attachment_path);
+    const filePath = path.join(uploadsDir, paper.attachment_path);
+    console.log(filePath);
     
     // 检查文件是否存在
     if (!fs.existsSync(filePath)) {
@@ -449,13 +450,12 @@ router.get('/:id/download', authenticateToken, async (req, res) => {
     res.setHeader('Content-Type', mimeType);
     
     // 创建一个友好的下载文件名
-    const originalFilename = path.basename(filePath);
     const extension = path.extname(filePath);
     // 使用论文标题作为下载文件名，去除特殊字符
     let downloadFilename = paper.title_zh || paper.title_en || '论文';
     downloadFilename = downloadFilename.replace(/[\\/:*?"<>|]/g, '').trim();
     downloadFilename += extension;
-    
+    // console.log(downloadFilename);
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(downloadFilename)}"`);
     
     // 流式传输文件
@@ -474,10 +474,6 @@ router.post('/upload-attachment', authenticateToken, authorizeRole(['author']), 
     if (!req.file) {
       return res.status(400).json({ message: '未上传文件' });
     }
-
-    // 获取文件的相对路径（相对于项目根目录）
-    const relativePath = path.join('uploads', req.file.filename);
-    
     res.status(200).json({
       message: '文件上传成功',
       file: {
@@ -485,7 +481,7 @@ router.post('/upload-attachment', authenticateToken, authorizeRole(['author']), 
         originalname: req.file.originalname,
         mimetype: req.file.mimetype,
         size: req.file.size,
-        path: relativePath
+        path: req.file.filename
       }
     });
   } catch (error) {
@@ -501,13 +497,9 @@ router.post('/', authenticateToken, authorizeRole(['author']), async (req, res) 
     // console.log(req.body);
     // 验证附件路径格式（如果提供了）
     if (attachment_path) {
-      // 检查附件路径是否以'uploads/'开头
-      if (!attachment_path.startsWith('uploads')) {
-        return res.status(400).json({ message: '附件路径格式不正确，必须以uploads开头' });
-      }
       
       // 检查附件文件是否存在
-      const filePath = path.join(__dirname, '..', attachment_path);
+      const filePath = path.join(uploadsDir, attachment_path);
       if (!fs.existsSync(filePath)) {
         return res.status(400).json({ message: '附件文件不存在，请先上传正确的附件' });
       }
@@ -561,7 +553,11 @@ router.post('/', authenticateToken, authorizeRole(['author']), async (req, res) 
       if (keywords_en && keywords_en.length > 0) {
         for (const keyword of keywords_en) {
           await connection.execute(
-            `INSERT INTO paper_keywords (paper_id, keyword_id) VALUES (?, (SELECT keyword_id FROM keywords WHERE keyword_name = ? AND keyword_type = 'en'))`,
+            `INSERT INTO paper_keywords (paper_id, keyword_id) 
+                VALUES (?, (SELECT keyword_id 
+                              FROM keywords 
+                              WHERE keyword_name = ? AND keyword_type = 'en' 
+                              LIMIT 1))`,
             [paperId, keyword ?? null]
           );
         }
@@ -613,13 +609,9 @@ router.put('/:id', authenticateToken, async (req, res) => {
     
     // 验证附件路径格式（如果提供了）
     if (attachment_path) {
-      // 检查附件路径是否以'uploads/'开头
-      if (!attachment_path.startsWith('uploads')) {
-        return res.status(400).json({ message: '附件路径格式不正确，必须以uploads/开头' });
-      }
       
       // 检查附件文件是否存在
-      const filePath = path.join(__dirname, '..', attachment_path);
+      const filePath = path.join(uploadsDir, attachment_path);
       if (!fs.existsSync(filePath)) {
         return res.status(400).json({ message: '附件文件不存在，请先上传正确的附件' });
       }
@@ -747,7 +739,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
 
       // 如果提供了新的附件路径并且与旧的不同，则删除旧附件
       if (oldAttachmentPath && attachment_path && oldAttachmentPath !== attachment_path) {
-        const oldFilePath = path.join(__dirname, '..', oldAttachmentPath);
+        const oldFilePath = path.join(uploadsDir, oldAttachmentPath);
         try {
           if (fs.existsSync(oldFilePath)) {
             fs.unlinkSync(oldFilePath);
